@@ -81,18 +81,29 @@ def deco_choc(cx, cy, inner, a0):
     ctx.lineCap = "butt"
 
 
-def deco_jammie(cx, cy, inner, a0):
-    for rf, af in FLECKS:
+# chocolate chips: (radius fraction, angle fraction across slice, size)
+CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.88, 0.70, 5), (0.20, 0.75, 5)]
+
+
+def deco_cookie(cx, cy, inner, a0):
+    for j, (rf, af, size) in enumerate(CHIPS):
+        ca = a0 + af * extent
+        x, y = polar(cx, cy, inner * rf, ca)
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(ca + j)
+        ctx.beginPath()
+        ctx.ellipse(0, 0, size, size * 0.7, 0, 0, 2 * math.pi)
+        ctx.fillStyle = "#3b1f12"
+        ctx.fill()
+        ctx.beginPath()
+        ctx.ellipse(-size * 0.25, -size * 0.2, size * 0.35, size * 0.2, 0, 0, 2 * math.pi)
+        ctx.fillStyle = "#6b4228"
+        ctx.fill()
+        ctx.restore()
+    for rf, af in FLECKS[:6]:
         x, y = polar(cx, cy, inner * rf, a0 + af * extent)
-        dot(x, y, 1.4, "#fff6e0")
-
-
-def after_jammie(cx, cy, inner):
-    # the jam centre, with a heart cut-out and a shine
-    jr = inner * 0.36
-    dot(cx, cy, jr + 4, "#e3b66f")
-    dot(cx, cy, jr, "#c8102e")
-    dot(cx - jr * 0.35, cy - jr * 0.4, jr * 0.28, "rgba(255,255,255,0.35)")
+        dot(x, y, 1.6, "#b97f35")
 
 
 THEMES = {
@@ -110,12 +121,12 @@ THEMES = {
         "text": "#fff1d6", "halo": "#2e170a", "hub": "#2e170a", "text_r": 0.66,
         "deco": deco_choc, "after": None,
     },
-    "jammie": {
-        "label": "Jammie Dodger",
-        "rim": "#dfae63", "flute": "#e9c07a",
-        "slices": ["#f1d49c", "#ecca8e", "#f4d9a6", "#e9c787"], "line": "#cf9f55",
-        "text": "#7a1426", "halo": "#fff3d9", "hub": "#7a1426", "text_r": 0.7,
-        "deco": deco_jammie, "after": after_jammie,
+    "cookie": {
+        "label": "Choc Chip Cookie",
+        "rim": "#b5732b", "flute": "#c4823a",
+        "slices": ["#dca75a", "#d39a4a", "#e0ae62", "#d09445"], "line": "#a8671f",
+        "text": "#3b1f12", "halo": "#f8e8c8", "hub": "#3b1f12", "text_r": 0.68,
+        "deco": deco_cookie, "after": None,
     },
 }
 theme_name = "digestive"
