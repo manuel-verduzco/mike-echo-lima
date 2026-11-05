@@ -23,6 +23,9 @@
     #power { width: min(300px, 80%); height: 16px; margin: 6px auto 14px; background: #2a2a38; border-radius: 8px; overflow: hidden; border: 1px solid #44445a; }
     #fill { height: 100%; width: 0; background: hsl(130,80%,50%); }
     button { user-select: none; -webkit-user-select: none; touch-action: none; font-size: 1.1rem; font-weight: bold; padding: 14px 48px; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
+    #picker { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+    button.pick { touch-action: manipulation; font-size: .9rem; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #2a2a38; color: #d8d8e6; border: 1px solid #44445a; }
+    button.pick.active { background: #e6b068; color: #3a1d0e; border-color: #e6b068; }
     button:disabled { opacity: .5; cursor: default; }
   </style>
 </head>
@@ -34,11 +37,16 @@
       <div id="result">Loading Python...</div>
       <div id="power" aria-label="Spin force"><div id="fill"></div></div>
       <button id="spin" disabled>HOLD TO SPIN</button>
+      <div id="picker" role="group" aria-label="Choose your biscuit">
+        <button class="pick" id="pick-digestive">Digestive</button>
+        <button class="pick" id="pick-choc">Choc Digestive</button>
+        <button class="pick" id="pick-jammie">Jammie Dodger</button>
+      </div>
     </div>
   </div>
   <p><small>Written in Python, running in your browser via
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
-  <script type="mpy" src="./web.py?v=7" config="./pyscript.toml"></script>
+  <script type="mpy" src="./web.py?v=8" config="./pyscript.toml"></script>
 </body>
 </html>

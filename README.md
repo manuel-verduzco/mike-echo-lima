@@ -14,6 +14,9 @@ In the browser version, **press and hold** the wheel (or the button) to charge t
 force bar, then release to spin. A longer hold means a harder, longer spin; a quick
 tap gives a gentle one. The result is random either way.
 
+Pick your biscuit (Digestive, Choc Digestive or Jammie Dodger) with the buttons
+under the spin button; your choice is remembered.
+
 ## Run it on your computer
 
 ```bash

@@ -34,15 +34,13 @@ charging = False
 charge_start = None
 
 
-# A classic British digestive: golden, flecked with wheat, with docking holes.
-BISCUIT = ["#ebc582", "#e4ba74", "#eec98a", "#e0b46c"]
-CHOC = "#4a2a14"
+# Three British biscuits you can pick from. Each theme is a dict of colours plus
+# two optional decoration functions (per slice, and once for the whole wheel).
 # (radius fraction, angle fraction across slice) for the round docking holes
 HOLES = [(0.30, 0.50), (0.50, 0.25), (0.50, 0.75), (0.72, 0.38), (0.72, 0.62), (0.88, 0.50)]
-# tiny wheat flecks: (radius fraction, angle fraction, size)
-FLECKS = [(0.15, 0.30, 1.6), (0.22, 0.80, 1.4), (0.38, 0.12, 1.5), (0.40, 0.88, 1.6),
-          (0.58, 0.50, 1.4), (0.62, 0.15, 1.6), (0.64, 0.85, 1.4), (0.80, 0.20, 1.5),
-          (0.80, 0.80, 1.6), (0.93, 0.25, 1.4), (0.93, 0.75, 1.5), (0.45, 0.50, 1.4)]
+# tiny flecks / sugar grains: (radius fraction, angle fraction)
+FLECKS = [(0.15, 0.30), (0.22, 0.80), (0.38, 0.12), (0.40, 0.88), (0.58, 0.50), (0.62, 0.15),
+          (0.64, 0.85), (0.80, 0.20), (0.80, 0.80), (0.93, 0.25), (0.93, 0.75), (0.45, 0.50)]
 
 
 def dot(x, y, size, color):
@@ -52,21 +50,93 @@ def dot(x, y, size, color):
     ctx.fill()
 
 
+def polar(cx, cy, rad, a):
+    return cx + rad * math.cos(a), cy + rad * math.sin(a)
+
+
+def deco_digestive(cx, cy, inner, a0):
+    for rf, af in FLECKS:
+        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
+        dot(x, y, 1.5, "#a6702f")
+    for rf, af in HOLES:
+        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
+        dot(x, y, 3.6, "#bd8a45")
+        dot(x, y, 2.2, "#8f5c24")
+
+
+def deco_choc(cx, cy, inner, a0):
+    # glossy chocolate highlights and little ridges
+    ctx.lineCap = "round"
+    ctx.strokeStyle = "rgba(255,255,255,0.16)"
+    ctx.lineWidth = 7
+    ctx.beginPath()
+    ctx.arc(cx, cy, inner * 0.86, a0 + 0.18 * extent, a0 + 0.5 * extent)
+    ctx.stroke()
+    ctx.strokeStyle = "rgba(0,0,0,0.22)"
+    ctx.lineWidth = 2
+    for rf in (0.45, 0.62):
+        ctx.beginPath()
+        ctx.arc(cx, cy, inner * rf, a0 + 0.12 * extent, a0 + 0.88 * extent)
+        ctx.stroke()
+    ctx.lineCap = "butt"
+
+
+def deco_jammie(cx, cy, inner, a0):
+    for rf, af in FLECKS:
+        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
+        dot(x, y, 1.4, "#fff6e0")
+
+
+def after_jammie(cx, cy, inner):
+    # the jam centre, with a heart cut-out and a shine
+    jr = inner * 0.36
+    dot(cx, cy, jr + 4, "#e3b66f")
+    dot(cx, cy, jr, "#c8102e")
+    dot(cx - jr * 0.35, cy - jr * 0.4, jr * 0.28, "rgba(255,255,255,0.35)")
+
+
+THEMES = {
+    "digestive": {
+        "label": "Digestive",
+        "rim": "#c98f45", "flute": "#d69d52",
+        "slices": ["#ebc582", "#e4ba74", "#eec98a", "#e0b46c"], "line": "#b7803c",
+        "text": "#4a2a14", "halo": "#f8e8c8", "hub": "#4a2a14", "text_r": 0.62,
+        "deco": deco_digestive, "after": None,
+    },
+    "choc": {
+        "label": "Choc Digestive",
+        "rim": "#c98f45", "flute": "#d69d52",
+        "slices": ["#6b3d22", "#5f341d", "#70422a", "#633720"], "line": "#3a1d0e",
+        "text": "#fff1d6", "halo": "#2e170a", "hub": "#2e170a", "text_r": 0.66,
+        "deco": deco_choc, "after": None,
+    },
+    "jammie": {
+        "label": "Jammie Dodger",
+        "rim": "#dfae63", "flute": "#e9c07a",
+        "slices": ["#f1d49c", "#ecca8e", "#f4d9a6", "#e9c787"], "line": "#cf9f55",
+        "text": "#7a1426", "halo": "#fff3d9", "hub": "#7a1426", "text_r": 0.7,
+        "deco": deco_jammie, "after": after_jammie,
+    },
+}
+theme_name = "digestive"
+
+
 def draw():
+    th = THEMES[theme_name]
     cx = SIZE / 2
     cy = TOP + SIZE / 2
     r = SIZE / 2 - 10
     ctx.clearRect(0, 0, SIZE, SIZE + TOP + 20)
 
-    # toasted rim with a finely fluted edge
+    # baked rim with a finely fluted edge
     ctx.beginPath()
     ctx.arc(cx, cy, r, 0, 2 * math.pi)
-    ctx.fillStyle = "#c98f45"
+    ctx.fillStyle = th["rim"]
     ctx.fill()
     flutes = 72
     for k in range(flutes):
-        a = angle + k * 2 * math.pi / flutes
-        dot(cx + (r - 1) * math.cos(a), cy + (r - 1) * math.sin(a), 5, "#d69d52")
+        x, y = polar(cx, cy, r - 1, angle + k * 2 * math.pi / flutes)
+        dot(x, y, 5, th["flute"])
 
     inner = r - 9
     for i, n in enumerate(numbers):
@@ -75,38 +145,33 @@ def draw():
         ctx.moveTo(cx, cy)
         ctx.arc(cx, cy, inner, a0, a0 + extent)
         ctx.closePath()
-        ctx.fillStyle = BISCUIT[i % len(BISCUIT)]
+        ctx.fillStyle = th["slices"][i % len(th["slices"])]
         ctx.fill()
-        ctx.strokeStyle = "#b7803c"
+        ctx.strokeStyle = th["line"]
         ctx.lineWidth = 2
         ctx.stroke()
-        for rf, af, size in FLECKS:
-            ca = a0 + af * extent
-            dot(cx + inner * rf * math.cos(ca), cy + inner * rf * math.sin(ca), size, "#a6702f")
-        for rf, af in HOLES:
-            ca = a0 + af * extent
-            hx = cx + inner * rf * math.cos(ca)
-            hy = cy + inner * rf * math.sin(ca)
-            dot(hx, hy, 3.6, "#bd8a45")
-            dot(hx, hy, 2.2, "#8f5c24")
-        mid = a0 + extent / 2
-        tx = cx + inner * 0.62 * math.cos(mid)
-        ty = cy + inner * 0.62 * math.sin(mid)
+        th["deco"](cx, cy, inner, a0)
+    if th["after"]:
+        th["after"](cx, cy, inner)
+
+    for i, n in enumerate(numbers):
+        mid = angle + i * extent + extent / 2
+        tx, ty = polar(cx, cy, inner * th["text_r"], mid)
         ctx.font = "bold 24px sans-serif"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.lineWidth = 5
-        ctx.strokeStyle = "#f8e8c8"
+        ctx.strokeStyle = th["halo"]
         ctx.strokeText(str(n), tx, ty)
-        ctx.fillStyle = CHOC
+        ctx.fillStyle = th["text"]
         ctx.fillText(str(n), tx, ty)
 
     # centre hub
     ctx.beginPath()
     ctx.arc(cx, cy, 22, 0, 2 * math.pi)
-    ctx.fillStyle = CHOC
+    ctx.fillStyle = th["hub"]
     ctx.fill()
-    ctx.strokeStyle = "#f8e8c8"
+    ctx.strokeStyle = th["halo"]
     ctx.lineWidth = 3
     ctx.stroke()
     # pointer at top
@@ -117,6 +182,23 @@ def draw():
     ctx.closePath()
     ctx.fillStyle = "#ffffff"
     ctx.fill()
+
+
+def set_theme(name, save=True):
+    global theme_name
+    theme_name = name
+    for key in THEMES:
+        document.getElementById("pick-" + key).classList.toggle("active", key == name)
+    if save:
+        try:
+            window.localStorage.setItem("biscuit", name)
+        except Exception:
+            pass
+    draw()
+
+
+def make_picker(name):
+    return create_proxy(lambda e: set_theme(name))
 
 
 def set_force(f):
@@ -201,6 +283,13 @@ window.addEventListener("pointerup", create_proxy(release))
 window.addEventListener("pointercancel", create_proxy(release))
 # keyboard users (Enter/Space on the button) get a medium spin
 button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
+for key in THEMES:
+    document.getElementById("pick-" + key).addEventListener("click", make_picker(key))
+saved = None
+try:
+    saved = window.localStorage.getItem("biscuit")
+except Exception:
+    pass
 button.disabled = False
 result.innerText = "Hold the wheel to charge, release to spin!"
-draw()
+set_theme(saved if saved in THEMES else "digestive", save=False)
