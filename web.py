@@ -3,6 +3,7 @@
 Uses the same phrases.py as the desktop version.
 """
 
+import json
 import math
 import random
 
@@ -106,6 +107,100 @@ def say(text, number=None):
         num_el.innerText = "#%d" % number
         num_el.style.display = "inline-block"
         result.classList.add("won")
+
+
+# ---- Sounds ---------------------------------------------------------------------
+# sounds.json says which sentence plays which audio file, e.g. {"37": "apple.mp3"}. The
+# files live in the sounds/ folder. A sound plays when its sentence comes up, and there
+# is a mute button (only shown once at least one sound exists). No sounds.json entries
+# means the game is silent, exactly as before.
+SOUNDS = {}
+player = document.getElementById("player")
+mute_btn = document.getElementById("mute")
+muted = False
+audio_unlocked = False
+# a tiny silent clip: playing it during the first tap unlocks audio on iPhones, which
+# otherwise refuse to play a sound that starts later, after the wheel has stopped
+SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA="
+
+
+def safe_play():
+    try:
+        p = player.play()
+        if p:
+            p.catch(create_proxy(lambda e: None))
+    except Exception:
+        pass
+
+
+def play_sound(number):
+    name = SOUNDS.get(number)
+    if not name or muted:
+        return
+    player.src = "sounds/" + window.encodeURIComponent(name)
+    safe_play()
+
+
+def stop_sound():
+    try:
+        player.pause()
+    except Exception:
+        pass
+
+
+def unlock_audio():
+    global audio_unlocked
+    if audio_unlocked or not SOUNDS:
+        return
+    audio_unlocked = True
+    player.src = SILENCE
+    safe_play()
+
+
+def show_mute():
+    mute_btn.innerText = "🔇" if muted else "🔊"
+
+
+def toggle_mute(event=None):
+    global muted
+    muted = not muted
+    show_mute()
+    if muted:
+        stop_sound()
+    try:
+        window.localStorage.setItem("muted", "1" if muted else "0")
+    except Exception:
+        pass
+
+
+def load_sounds():
+    # the number changes every 10 minutes, so edits to sounds.json show up soon after publishing
+    url = "sounds.json?t=%d" % int(window.Date.now() / 600000)
+
+    def on_response(resp):
+        if resp.ok:
+            return resp.text()
+        return None
+
+    def on_text(text):
+        if not text:
+            return
+        try:
+            data = json.loads(text)
+        except Exception:
+            return
+        for key in data:
+            name = data[key]
+            ok = isinstance(name, str) and name and "/" not in name and "\\" not in name and ".." not in name
+            if key.isdigit() and ok:
+                SOUNDS[int(key)] = name
+        if SOUNDS:
+            mute_btn.hidden = False
+
+    try:
+        window.fetch(url).then(create_proxy(on_response)).then(create_proxy(on_text)).catch(create_proxy(lambda e: None))
+    except Exception:
+        pass
 
 
 # ---- Special effects -----------------------------------------------------------
@@ -589,6 +684,7 @@ def start_charge(event):
     charging = True
     charge_start = None
     set_force(0)
+    unlock_audio()
     power.style.visibility = "visible"
     say("Charging... release to spin!")
     window.requestAnimationFrame(charge_proxy)
@@ -611,6 +707,7 @@ def spin(force):
     button.disabled = True
     power.style.visibility = "hidden"  # bar disappears on release
     say("Spinning...")
+    stop_sound()  # cut off the previous sentence's sound
     groups[:] = deal()  # shuffle where the slices sit on the wheel
     build_body()
     number = random_number()  # any of ALL the numbers, each equally likely; force only changes the show
@@ -637,6 +734,7 @@ def spin(force):
         draw()
         say(PHRASES[number], number)
         counter_request("hit")  # count this finished spin
+        play_sound(number)  # its own voice note / sound, if you added one
         fire_effects(effects, number)
         button.disabled = False
         spinning = False
@@ -667,11 +765,15 @@ window.addEventListener("pointercancel", create_proxy(release))
 # keyboard users (Enter/Space on the button) get a medium spin
 button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
 document.getElementById("swap").addEventListener("click", create_proxy(next_theme))
+mute_btn.addEventListener("click", create_proxy(toggle_mute))
 saved = None
 try:
     saved = window.localStorage.getItem("biscuit")
+    muted = window.localStorage.getItem("muted") == "1"
 except Exception:
     pass
+show_mute()
+load_sounds()
 button.disabled = False
 say("Hold the wheel to charge, release to spin!")
 set_theme(saved if saved in THEMES else "cookie", save=False)

@@ -1,3 +1,5 @@
+import json
+import os
 import random
 import unittest
 
@@ -66,6 +68,26 @@ class EffectTests(unittest.TestCase):
 
     def test_the_jackpot_number_has_a_sentence_to_show(self):
         self.assertIn(JACKPOT_NUMBER, PHRASES)  # the banner shows this sentence
+
+
+class SoundManifestTests(unittest.TestCase):
+    """Catches typos in sounds.json before they reach the website."""
+
+    def setUp(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        self.folder = os.path.join(here, "sounds")
+        with open(os.path.join(here, "sounds.json"), encoding="utf-8") as f:
+            self.manifest = json.load(f)
+
+    def test_every_entry_is_a_real_sentence_and_a_real_file(self):
+        for key, name in self.manifest.items():
+            self.assertTrue(key.isdigit(), "%r is not a sentence number" % key)
+            self.assertIn(int(key), PHRASES, "sentence %s does not exist in phrases.json" % key)
+            self.assertTrue(isinstance(name, str) and name, "sentence %s has no file name" % key)
+            self.assertNotIn("/", name)
+            self.assertNotIn("..", name)
+            self.assertTrue(os.path.isfile(os.path.join(self.folder, name)),
+                            "sounds/%s (for sentence %s) does not exist - check the spelling" % (name, key))
 
 
 if __name__ == "__main__":

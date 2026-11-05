@@ -30,6 +30,13 @@ Which number is special, how often surprises happen and which effects exist are 
 of [`effects.py`](effects.py). People who ask their device for reduced motion get the banner but
 no flying particles.
 
+## Sounds for sentences
+
+Record a voice note (or use any mp3) and the game can play it when a sentence comes up. Drop the
+file in the [`sounds`](sounds) folder and add a line to [`sounds.json`](sounds.json), for example
+`{"37": "apple-in-bowl.mp3"}`. A speaker button appears on the wheel so people can mute it. The
+folder's [README](sounds/README.md) has the details and tips. Sentences with no entry stay silent.
+
 ## Global spin counter
 
 The online version shows how many spins everyone has done in total ("🍪 1,234 spins worldwide").
@@ -63,6 +70,7 @@ Change `GROUPS` in [`phrases.py`](phrases.py) for more or fewer slices.
 
 - `spin_wheel.py` - desktop version (tkinter)
 - `index.html`, `web.py`, `pyscript.toml` - browser version (PyScript)
+- `sounds.json` and `sounds/` - optional voice notes for sentences
 - `phrases.json` - the sayings; `phrases.py` loads them and deals the wheel (shared by both)
 
 ## Tests
