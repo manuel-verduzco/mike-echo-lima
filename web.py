@@ -121,8 +121,8 @@ fx_last = None
 fx_w = 0
 fx_h = 0
 FXD = 1
-WOBBLE_MS = 1100  # how long the wheel teeters before settling
-WOBBLE_AMP = 0.55  # how far it teeters, in slices (can tip over a divider and back)
+WOBBLE_MS = 1700  # how long the wheel teeters before settling
+WOBBLE_AMP = 1.3  # how far it teeters, in slices: it tips over several dividers and back
 CRUMB_COLORS = ["#d9a45a", "#c98f45", "#b8782f", "#e6b970", "#a8651f"]
 
 
@@ -662,7 +662,7 @@ def spin(force):
                 t_end[0] = now
             tw = (now - t_end[0]) / WOBBLE_MS
             if tw < 1:
-                angle = start + total + WOBBLE_AMP * extent * math.sin(tw * 3.5 * math.pi) * (1 - tw) ** 2
+                angle = start + total + WOBBLE_AMP * extent * math.sin(tw * 5.5 * math.pi) * (1 - tw) ** 1.5
                 flap = 0.6
                 draw()
                 window.requestAnimationFrame(step_proxy)
