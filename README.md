@@ -20,15 +20,15 @@ Choc Chip Cookie); your choice is remembered.
 
 ## Special effects
 
-- **Number 1 is special.** If the wheel lands on number 1 ("GOOD EVENING"), the wheel teeters
-  before it settles, the sentence flashes across the screen in big gold letters, the result card
-  turns shiny gold, and it rains cookies.
+- **Number 1 is special.** If the wheel lands on number 1 ("GOOD EVENING"), the sentence
+  flashes across the screen in big gold letters, the result card turns shiny gold, and it rains
+  cookies.
 - **Random surprises.** About 1 spin in 4 gets one random effect: a burst of crumbs and chocolate
-  chips from the pointer, a shower of cookies, or a wobble as the wheel settles.
+  chips from the pointer, or a shower of cookies.
 
 Which number is special, how often surprises happen and which effects exist are set at the top
 of [`effects.py`](effects.py). People who ask their device for reduced motion get the banner but
-no flying particles or wobble.
+no flying particles.
 
 ## Global spin counter
 

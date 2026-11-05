@@ -31,7 +31,7 @@ counter_el = document.getElementById("counter")
 
 IS_LIVE = window.location.hostname == "manuel-verduzco.github.io"
 # For testing only, and ignored on the live site: add ?force=1 to the address to make the
-# wheel land on that number, and/or &fx=crumbs (or rain, wobble) to force an effect.
+# wheel land on that number, and/or &fx=crumbs (or rain) to force an effect.
 FORCE_NUMBER = None
 FORCE_FX = None
 if not IS_LIVE:
@@ -111,7 +111,7 @@ def say(text, number=None):
 # ---- Special effects -----------------------------------------------------------
 # Which effects fire is decided in effects.py. They are drawn on a see-through canvas
 # that covers the whole page (it never blocks clicks). People who ask their device for
-# reduced motion get the jackpot banner but no flying particles or wobble.
+# reduced motion get the jackpot banner but no flying particles.
 fx = document.getElementById("fx")
 fxctx = fx.getContext("2d")
 banner = document.getElementById("banner")
@@ -121,8 +121,6 @@ fx_last = None
 fx_w = 0
 fx_h = 0
 FXD = 1
-WOBBLE_MS = 1700  # how long the wheel teeters before settling
-WOBBLE_AMP = 1.3  # how far it teeters, in slices: it tips over several dividers and back
 CRUMB_COLORS = ["#d9a45a", "#c98f45", "#b8782f", "#e6b970", "#a8651f"]
 
 
@@ -621,7 +619,6 @@ def spin(force):
     effects = choose_effects(number)  # which special effects this spin gets
     if FORCE_FX and number != JACKPOT_NUMBER:
         effects = [FORCE_FX]
-    wobble = "wobble" in effects and not reduced_motion()
     index = group_index(groups, number)  # the slice that contains it
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
     duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force
@@ -632,7 +629,6 @@ def spin(force):
     start = angle
     total = (end_mod - start) % (2 * math.pi) + 2 * math.pi * turns
     t0 = [None]
-    t_end = [None]
 
     def finish():
         global angle, spinning, flap
@@ -656,17 +652,6 @@ def spin(force):
             draw()
             window.requestAnimationFrame(step_proxy)
             return
-        if wobble:
-            # the wheel teeters back and forth, tipping over a divider and back, then settles
-            if t_end[0] is None:
-                t_end[0] = now
-            tw = (now - t_end[0]) / WOBBLE_MS
-            if tw < 1:
-                angle = start + total + WOBBLE_AMP * extent * math.sin(tw * 5.5 * math.pi) * (1 - tw) ** 1.5
-                flap = 0.6
-                draw()
-                window.requestAnimationFrame(step_proxy)
-                return
         finish()
 
     step_proxy = create_proxy(step)

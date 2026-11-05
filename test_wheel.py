@@ -46,7 +46,6 @@ class EffectTests(unittest.TestCase):
         for _ in range(200):
             fx = choose_effects(JACKPOT_NUMBER)
             self.assertIn("jackpot", fx)
-            self.assertIn("wobble", fx)  # the nail-biting teeter comes first
 
     def test_other_numbers_never_get_the_jackpot(self):
         for n in PHRASES:
