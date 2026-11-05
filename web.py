@@ -22,6 +22,7 @@ ctx = canvas.getContext("2d")
 result = document.getElementById("result")
 button = document.getElementById("spin")
 fill = document.getElementById("fill")
+power = document.getElementById("power")
 hint = document.getElementById("hint")
 
 numbers = sorted(PHRASES)
@@ -141,6 +142,8 @@ def start_charge(event):
         return
     charging = True
     charge_start = None
+    set_force(0)
+    power.style.visibility = "visible"
     result.innerText = "Charging... release to spin!"
     window.requestAnimationFrame(charge_proxy)
 
@@ -160,7 +163,7 @@ def spin(force):
         return
     spinning = True
     button.disabled = True
-    set_force(force)
+    power.style.visibility = "hidden"  # bar disappears on release
     result.innerText = "Spinning..."
     index = random.randint(0, count - 1)  # the result is random; force only changes the show
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
@@ -177,7 +180,6 @@ def spin(force):
             t0[0] = now
         t = min((now - t0[0]) / duration, 1)
         angle = start + total * (1 - (1 - t) ** 3)
-        set_force(force * (1 - t))  # bar drains as the wheel slows
         draw()
         if t < 1:
             window.requestAnimationFrame(step_proxy)
