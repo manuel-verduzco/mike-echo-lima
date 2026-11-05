@@ -14,6 +14,8 @@ COLORS = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#9b5de5", "#f78c6b"]
 SIZE = 460
 MARGIN = 20
 SPIN_MS = 4000
+BG = "#14141c"
+FG = "#f1f1f6"
 FRAME_MS = 16
 
 
@@ -45,19 +47,21 @@ class WheelApp:
 
         root.title("Spin the Wheel")
         root.resizable(False, False)
+        root.configure(bg=BG)
 
         self.canvas = tk.Canvas(root, width=SIZE, height=SIZE + 10,
-                                highlightthickness=0)
+                                highlightthickness=0, bg=BG)
         self.canvas.pack(padx=10, pady=(10, 0))
         self.canvas.bind("<Button-1>", lambda _e: self.spin())
 
         self.result = tk.Label(root, text="Click the wheel to spin!",
                                font=("Segoe UI", 14, "bold"),
-                               wraplength=SIZE, height=4)
+                               wraplength=SIZE, height=4, bg=BG, fg=FG)
         self.result.pack(padx=10)
 
         self.button = tk.Button(root, text="SPIN", font=("Segoe UI", 12, "bold"),
-                                command=self.spin, width=12)
+                                command=self.spin, width=12,
+                                bg="#1b9ac4", fg="white", relief="flat")
         self.button.pack(pady=(0, 12))
 
         self.draw()
@@ -81,9 +85,9 @@ class WheelApp:
             c.create_text(tx, ty, text=str(number), font=("Segoe UI", 16, "bold"),
                           fill="white")
 
-        c.create_oval(cx - 22, cy - 22, cx + 22, cy + 22, fill="#222", outline="white", width=3)
+        c.create_oval(cx - 22, cy - 22, cx + 22, cy + 22, fill=BG, outline="white", width=3)
         # pointer at the top
-        c.create_polygon(cx - 14, 0, cx + 14, 0, cx, 34, fill="#222", outline="white", width=2)
+        c.create_polygon(cx - 14, 0, cx + 14, 0, cx, 34, fill="white", outline="white", width=2)
 
     def spin(self) -> None:
         if self.spinning:

@@ -51,7 +51,7 @@ def draw():
         ctx.fillText(str(n), cx + r * 0.75 * math.cos(mid), cy + r * 0.75 * math.sin(mid))
     ctx.beginPath()
     ctx.arc(cx, cy, 22, 0, 2 * math.pi)
-    ctx.fillStyle = "#222"
+    ctx.fillStyle = "#14141c"
     ctx.fill()
     ctx.strokeStyle = "white"
     ctx.lineWidth = 3
@@ -62,7 +62,7 @@ def draw():
     ctx.lineTo(cx + 14, 0)
     ctx.lineTo(cx, 34)
     ctx.closePath()
-    ctx.fillStyle = "#222"
+    ctx.fillStyle = "#ffffff"
     ctx.fill()
 
 
