@@ -1,14 +1,15 @@
 # Spin the Bic Bic
 
-A tiny, fun Python game: click the wheel, it spins, and you get a random number
-with a saying attached to it.
+### ▶ [Play it online: https://manuel-verduzco.github.io/mike-echo-lima/](https://manuel-verduzco.github.io/mike-echo-lima/)
 
-Built with only the Python standard library (tkinter), so there is nothing to install.
+A tiny, fun Python game: spin the biscuit and it lands on a random number with a
+saying attached to it. It works in the browser, and there is also a desktop version
+built with only the Python standard library (tkinter).
 
 ## Play online
 
-Once GitHub Pages is enabled, the game runs in any browser (the Python is executed
-by [PyScript](https://pyscript.net)): `https://<your-username>.github.io/<repo-name>/`
+Open **[https://manuel-verduzco.github.io/mike-echo-lima/](https://manuel-verduzco.github.io/mike-echo-lima/)** in any browser, on a computer or a phone. It runs
+the Python in the page itself using [PyScript](https://pyscript.net), so there is nothing to install.
 
 In the browser version, **press and hold** the wheel (or the button) to charge the
 force bar, then release to spin. A longer hold means a harder, longer spin; a quick
