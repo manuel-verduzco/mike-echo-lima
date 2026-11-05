@@ -60,23 +60,9 @@ def reseed():
     _seed = 1
 
 
-# Three British biscuits. Each theme is a dict of colours plus decoration functions:
-# "deco" (per slice, few slices) and "dense" (whole wheel, many slices).
-# (radius fraction, angle fraction across slice) for the round docking holes
-HOLES = [(0.30, 0.50), (0.50, 0.25), (0.50, 0.75), (0.72, 0.38), (0.72, 0.62), (0.88, 0.50)]
-# tiny flecks / sugar grains: (radius fraction, angle fraction)
-FLECKS = [(0.15, 0.30), (0.22, 0.80), (0.38, 0.12), (0.40, 0.88), (0.58, 0.50), (0.62, 0.15),
-          (0.64, 0.85), (0.80, 0.20), (0.80, 0.80), (0.93, 0.25), (0.93, 0.75), (0.45, 0.50)]
-# chocolate chips: (radius fraction, angle fraction across slice, size)
-CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.88, 0.70, 5), (0.20, 0.75, 5)]
-
-
-# Where the texture goes so it stays clear of the labels (set in build_body).
-hole_rings = ((0.28, 12), (0.73, 40))
-chip_bands = ((0.12, 0.46), (0.67, 0.79))
-sc = 1.0  # decoration scale: shrinks the per-slice decorations when slices get narrow
-
-
+# Three British biscuits. Each is one continuous surface: a base colour (with a soft
+# gradient) plus one texture spread over the whole wheel. The slices are only hinted
+# at by faint cut lines, so the biscuit looks like a single biscuit.
 def dot(x, y, size, color):
     ctx.beginPath()
     ctx.arc(x, y, size, 0, 2 * math.pi)
@@ -86,6 +72,11 @@ def dot(x, y, size, color):
 
 def polar(cx, cy, rad, a):
     return cx + rad * math.cos(a), cy + rad * math.sin(a)
+
+
+def scatter(cx, cy, inner, lo=0.0):
+    """A random point on the biscuit, never nearer the centre than `lo`."""
+    return polar(cx, cy, inner * (lo + (0.97 - lo) * math.sqrt(rnd())), rnd() * 2 * math.pi)
 
 
 def chip(x, y, size, rot):
@@ -103,108 +94,66 @@ def chip(x, y, size, rot):
     ctx.restore()
 
 
-# --- few slices: decorate every slice ---
-def deco_digestive(cx, cy, inner, a0):
-    for rf, af in FLECKS:
-        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
-        dot(x, y, 1.5, "#a6702f")
-    for rf, af in HOLES:
-        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
-        dot(x, y, 3.6 * sc, "#bd8a45")
-        dot(x, y, 2.2 * sc, "#8f5c24")
-
-
-def deco_choc(cx, cy, inner, a0):
-    ctx.lineCap = "round"
-    ctx.strokeStyle = "rgba(255,255,255,0.16)"
-    ctx.lineWidth = 7 * sc
-    ctx.beginPath()
-    ctx.arc(cx, cy, inner * 0.86, a0 + 0.18 * extent, a0 + 0.5 * extent)
-    ctx.stroke()
-    ctx.strokeStyle = "rgba(0,0,0,0.22)"
-    ctx.lineWidth = 2 * sc
-    for rf in (0.45, 0.62):
-        ctx.beginPath()
-        ctx.arc(cx, cy, inner * rf, a0 + 0.12 * extent, a0 + 0.88 * extent)
-        ctx.stroke()
-    ctx.lineCap = "butt"
-
-
-def deco_cookie(cx, cy, inner, a0):
-    for j, (rf, af, size) in enumerate(CHIPS):
-        ca = a0 + af * extent
-        x, y = polar(cx, cy, inner * rf, ca)
-        chip(x, y, size * sc, ca + j)
-    for rf, af in FLECKS[:6]:
-        x, y = polar(cx, cy, inner * rf, a0 + af * extent)
-        dot(x, y, 1.6, "#b97f35")
-
-
-# --- many slices: one texture over the whole wheel, keeping the number rings clear ---
-def dense_digestive(cx, cy, inner):
+def texture_digestive(cx, cy, inner):
     reseed()
-    for _ in range(90):
-        x, y = polar(cx, cy, inner * math.sqrt(rnd()), rnd() * 2 * math.pi)
-        dot(x, y, 1.3, "#a6702f")
-    for rf, holes in hole_rings:
+    for _ in range(150):  # wheat flecks
+        x, y = scatter(cx, cy, inner)
+        dot(x, y, 1.0 + 0.8 * rnd(), "#a6702f")
+    # the little docking holes, in neat staggered rings like a real digestive
+    for ring, (rf, holes) in enumerate(((0.17, 6), (0.35, 13), (0.53, 20), (0.71, 27), (0.89, 34))):
         for k in range(holes):
-            x, y = polar(cx, cy, inner * rf, k * 2 * math.pi / holes)
-            dot(x, y, 3, "#bd8a45")
-            dot(x, y, 1.8, "#8f5c24")
+            x, y = polar(cx, cy, inner * rf, (k + 0.5 * (ring % 2)) * 2 * math.pi / holes)
+            dot(x, y, 3.4, "#bd8a45")
+            dot(x, y, 2.0, "#8f5c24")
 
 
-def dense_choc(cx, cy, inner):
+def texture_choc(cx, cy, inner):
     reseed()
     ctx.lineCap = "round"
-    ctx.strokeStyle = "rgba(0,0,0,0.22)"
-    ctx.lineWidth = 2
-    for rf in (0.40, 0.73):
+    ctx.strokeStyle = "rgba(0,0,0,0.16)"
+    ctx.lineWidth = 1.5
+    for rf in (0.22, 0.40, 0.58, 0.76, 0.92):  # faint ridges
         ctx.beginPath()
         ctx.arc(cx, cy, inner * rf, 0, 2 * math.pi)
         ctx.stroke()
-    ctx.strokeStyle = "rgba(255,255,255,0.14)"
-    ctx.lineWidth = 6
-    for _ in range(16):
+    ctx.strokeStyle = "rgba(255,255,255,0.10)"
+    ctx.lineWidth = 5
+    for _ in range(14):  # little glossy streaks
         a = rnd() * 2 * math.pi
         ctx.beginPath()
-        ctx.arc(cx, cy, inner * (0.2 + 0.75 * rnd()), a, a + 0.25)
+        ctx.arc(cx, cy, inner * (0.15 + 0.8 * rnd()), a, a + 0.12 + 0.2 * rnd())
         ctx.stroke()
     ctx.lineCap = "butt"
 
 
-def dense_cookie(cx, cy, inner):
+def texture_cookie(cx, cy, inner):
     reseed()
-    for lo, hi in chip_bands:
-        for j in range(14):
-            a = rnd() * 2 * math.pi
-            x, y = polar(cx, cy, inner * (lo + (hi - lo) * rnd()), a)
-            chip(x, y, 4.5 + 2 * rnd(), a + j)
-    for _ in range(40):
-        x, y = polar(cx, cy, inner * math.sqrt(rnd()), rnd() * 2 * math.pi)
-        dot(x, y, 1.4, "#b97f35")
+    for _ in range(80):  # crumbly speckles
+        x, y = scatter(cx, cy, inner)
+        dot(x, y, 1.0 + 1.0 * rnd(), "#b97f35")
+    for _ in range(34):  # chocolate chips, anywhere on the cookie
+        x, y = scatter(cx, cy, inner, 0.14)
+        chip(x, y, 5 + 3 * rnd(), rnd() * 6.28)
 
 
 THEMES = {
     "digestive": {
         "label": "Digestive",
-        "rim": "#c98f45", "flute": "#d69d52",
-        "slices": ["#ebc582", "#e4ba74", "#eec98a", "#e0b46c"], "line": "#b7803c",
-        "text": "#4a2a14", "halo": "#f8e8c8", "hub": "#4a2a14", "text_r": 0.62,
-        "deco": deco_digestive, "dense": dense_digestive, "after": None,
+        "rim": "#c98f45", "flute": "#d69d52", "c0": "#f0d196", "c1": "#e1b46b",
+        "line": "rgba(150,95,35,0.35)", "text": "#4a2a14", "halo": "#f8e8c8", "hub": "#4a2a14",
+        "text_r": 0.62, "texture": texture_digestive, "glare": False,
     },
     "choc": {
         "label": "Choc Digestive",
-        "rim": "#c98f45", "flute": "#d69d52",
-        "slices": ["#6b3d22", "#5f341d", "#70422a", "#633720"], "line": "#3a1d0e",
-        "text": "#fff1d6", "halo": "#2e170a", "hub": "#2e170a", "text_r": 0.66,
-        "deco": deco_choc, "dense": dense_choc, "after": None,
+        "rim": "#c98f45", "flute": "#d69d52", "c0": "#76462b", "c1": "#583019",
+        "line": "rgba(25,10,4,0.5)", "text": "#fff1d6", "halo": "#2e170a", "hub": "#2e170a",
+        "text_r": 0.66, "texture": texture_choc, "glare": True,
     },
     "cookie": {
         "label": "Choc Chip Cookie",
-        "rim": "#b5732b", "flute": "#c4823a",
-        "slices": ["#dca75a", "#d39a4a", "#e0ae62", "#d09445"], "line": "#a8671f",
-        "text": "#3b1f12", "halo": "#f8e8c8", "hub": "#3b1f12", "text_r": 0.68,
-        "deco": deco_cookie, "dense": dense_cookie, "after": None,
+        "rim": "#b5732b", "flute": "#c4823a", "c0": "#e4b26b", "c1": "#cf9144",
+        "line": "rgba(130,75,20,0.35)", "text": "#3b1f12", "halo": "#f8e8c8", "hub": "#3b1f12",
+        "text_r": 0.68, "texture": texture_cookie, "glare": False,
     },
 }
 theme_name = "digestive"
@@ -213,11 +162,10 @@ theme_name = "digestive"
 def build_body():
     """Draw the biscuit (at rotation 0) into the hidden canvas. Call after the
     biscuit or the order of the numbers changes."""
-    global ctx, sc
+    global ctx
     th = THEMES[theme_name]
     dense = count >= DENSE
     radial = dense or max(len(label(g)) for g in groups) > 3  # long labels run along the slice
-    sc = max(0.85, min(1.0, extent / 0.5236))  # narrower slices get smaller decorations
     main_ctx = ctx
     ctx = bctx
     try:
@@ -236,24 +184,26 @@ def build_body():
             x, y = polar(cx, cy, r - 1, k * 2 * math.pi / 72)
             dot(x, y, 5, th["flute"])
 
+        # the biscuit surface: one gradient, one texture over the whole wheel
         inner = r - 9
+        grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, inner)
+        grad.addColorStop(0, th["c0"])
+        grad.addColorStop(1, th["c1"])
+        ctx.beginPath()
+        ctx.arc(cx, cy, inner, 0, 2 * math.pi)
+        ctx.fillStyle = grad
+        ctx.fill()
+        th["texture"](cx, cy, inner)
+
+        # faint cut lines between the slices
+        ctx.strokeStyle = th["line"]
+        ctx.lineWidth = 1.2
         for i in range(count):
-            a0 = i * extent
+            a = i * extent
             ctx.beginPath()
             ctx.moveTo(cx, cy)
-            ctx.arc(cx, cy, inner, a0, a0 + extent)
-            ctx.closePath()
-            ctx.fillStyle = th["slices"][i % len(th["slices"])]
-            ctx.fill()
-            ctx.strokeStyle = th["line"]
-            ctx.lineWidth = 0.8 if dense else 2
+            ctx.lineTo(cx + inner * math.cos(a), cy + inner * math.sin(a))
             ctx.stroke()
-            if not dense:
-                th["deco"](cx, cy, inner, a0)
-        if dense:
-            th["dense"](cx, cy, inner)
-        if th["after"]:
-            th["after"](cx, cy, inner)
 
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
@@ -305,6 +255,20 @@ def draw():
     ctx.rotate(angle)
     ctx.drawImage(body, -SIZE / 2, -SIZE / 2, SIZE, SIZE)
     ctx.restore()
+    if th["glare"]:
+        # a fixed shine that stays put while the chocolate biscuit spins underneath
+        ctx.lineCap = "round"
+        ctx.strokeStyle = "rgba(255,255,255,0.10)"
+        ctx.lineWidth = 16
+        ctx.beginPath()
+        ctx.arc(cx, cy, (SIZE / 2 - 19) * 0.78, -2.75, -1.75)
+        ctx.stroke()
+        ctx.lineWidth = 5
+        ctx.strokeStyle = "rgba(255,255,255,0.16)"
+        ctx.beginPath()
+        ctx.arc(cx, cy, (SIZE / 2 - 19) * 0.86, -2.65, -1.95)
+        ctx.stroke()
+        ctx.lineCap = "butt"
 
     # centre hub
     ctx.beginPath()
