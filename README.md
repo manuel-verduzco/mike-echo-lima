@@ -18,6 +18,18 @@ tap gives a gentle one. The result is random either way.
 Tap the 🔄 button next to the wheel to change the biscuit (Digestive, Choc Digestive,
 Choc Chip Cookie); your choice is remembered.
 
+## Global spin counter
+
+The online version shows how many spins everyone has done in total ("🍪 1,234 spins worldwide").
+GitHub Pages cannot store data, so the total is kept on a free public counter service,
+[Abacus](https://jasoncameron.dev/abacus/). When a spin finishes, the page asks it to add 1 and
+shows the new total. Only the counter's name is sent, nothing about the player. If the service is
+unreachable, the game still works and the counter is simply hidden. Spins made on `localhost` use
+a separate "-dev" counter, so testing does not change the real number.
+
+Because it is a public counter, anyone who knows its address could push the number up. That is fine
+for a fun game, but do not treat the number as exact.
+
 ## Run it on your computer
 
 ```bash

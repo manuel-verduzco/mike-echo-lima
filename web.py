@@ -26,6 +26,53 @@ fill = document.getElementById("fill")
 power = document.getElementById("power")
 hint = document.getElementById("hint")
 num_el = document.getElementById("num")
+counter_el = document.getElementById("counter")
+
+# ---- Global spin counter -------------------------------------------------------
+# GitHub Pages cannot store anything, so the total lives on a free public counter
+# service (https://jasoncameron.dev/abacus/). Each finished spin adds 1. Only the
+# counter name is sent, nothing about the player. If the service is unreachable the
+# game still works and the counter just stays hidden. Spins made while testing on
+# localhost go to a separate "-dev" counter so they do not inflate the real total.
+COUNTER_BASE = "https://abacus.jasoncameron.dev"
+COUNTER_NS = "manuel-verduzco-mike-echo-lima"
+if window.location.hostname != "manuel-verduzco.github.io":
+    COUNTER_NS += "-dev"
+COUNTER_KEY = "spins"
+
+
+def show_count(value):
+    digits = str(int(value))
+    out = ""
+    while len(digits) > 3:
+        out = "," + digits[-3:] + out
+        digits = digits[:-3]
+    total = digits + out
+    counter_el.innerText = "🍪 %s spin%s worldwide" % (total, "" if total == "1" else "s")
+    counter_el.style.visibility = "visible"
+
+
+def counter_request(action):
+    """action is "get" (just read the total) or "hit" (add one spin, then show the new total)."""
+    url = "%s/%s/%s/%s" % (COUNTER_BASE, action, COUNTER_NS, COUNTER_KEY)
+
+    def on_response(resp):
+        if resp.ok:
+            return resp.json()
+        return None
+
+    def on_data(data):
+        if data:
+            show_count(data.value)
+        elif action == "get":
+            show_count(0)  # nobody has spun yet, so the counter does not exist yet
+
+    try:
+        window.fetch(url).then(create_proxy(on_response)).then(create_proxy(on_data)).catch(create_proxy(lambda e: None))
+    except Exception:
+        pass
+
+
 msg_el = document.getElementById("msg")
 
 
@@ -410,6 +457,7 @@ def spin(force):
             flap = 0.0
             draw()
             say(PHRASES[number], number)
+            counter_request("hit")  # count this finished spin
             button.disabled = False
             spinning = False
 
@@ -434,3 +482,4 @@ except Exception:
 button.disabled = False
 say("Hold the wheel to charge, release to spin!")
 set_theme(saved if saved in THEMES else "cookie", save=False)
+counter_request("get")
