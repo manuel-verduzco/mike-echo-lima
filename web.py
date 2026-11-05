@@ -6,6 +6,7 @@ Uses the same phrases.py as the desktop version.
 import math
 import random
 
+from effects import JACKPOT_NUMBER, choose_effects
 from phrases import PHRASES, deal, group_index, label, random_number
 from pyscript import document, window
 from pyscript.ffi import create_proxy
@@ -28,6 +29,19 @@ hint = document.getElementById("hint")
 num_el = document.getElementById("num")
 counter_el = document.getElementById("counter")
 
+IS_LIVE = window.location.hostname == "manuel-verduzco.github.io"
+# For testing only, and ignored on the live site: add ?force=1 to the address to make the
+# wheel land on that number, and/or &fx=crumbs (or rain, wobble) to force an effect.
+FORCE_NUMBER = None
+FORCE_FX = None
+if not IS_LIVE:
+    for part in window.location.search.replace("?", "").split("&"):
+        pair = part.split("=")
+        if len(pair) == 2 and pair[0] == "force" and pair[1].isdigit():
+            FORCE_NUMBER = int(pair[1])
+        if len(pair) == 2 and pair[0] == "fx":
+            FORCE_FX = pair[1]
+
 # ---- Global spin counter -------------------------------------------------------
 # GitHub Pages cannot store anything, so the total lives on a free public counter
 # service (https://jasoncameron.dev/abacus/). Each finished spin adds 1. Only the
@@ -36,7 +50,7 @@ counter_el = document.getElementById("counter")
 # localhost go to a separate "-dev" counter so they do not inflate the real total.
 COUNTER_BASE = "https://abacus.jasoncameron.dev"
 COUNTER_NS = "manuel-verduzco-mike-echo-lima"
-if window.location.hostname != "manuel-verduzco.github.io":
+if not IS_LIVE:
     COUNTER_NS += "-dev"
 COUNTER_KEY = "spins"
 
@@ -52,11 +66,13 @@ def show_count(value):
     counter_el.style.visibility = "visible"
 
 
-def counter_request(action):
+def counter_request(action, retry=True):
     """action is "get" (just read the total) or "hit" (add one spin, then show the new total)."""
     url = "%s/%s/%s/%s" % (COUNTER_BASE, action, COUNTER_NS, COUNTER_KEY)
+    status = [0]
 
     def on_response(resp):
+        status[0] = resp.status
         if resp.ok:
             return resp.json()
         return None
@@ -64,8 +80,11 @@ def counter_request(action):
     def on_data(data):
         if data:
             show_count(data.value)
-        elif action == "get":
+        elif action == "get" and status[0] == 404:
             show_count(0)  # nobody has spun yet, so the counter does not exist yet
+        elif retry:
+            # the free service hiccuped: try once more shortly, otherwise stay quiet
+            window.setTimeout(create_proxy(lambda: counter_request("get", False)), 1500)
 
     try:
         window.fetch(url).then(create_proxy(on_response)).then(create_proxy(on_data)).catch(create_proxy(lambda e: None))
@@ -79,6 +98,7 @@ msg_el = document.getElementById("msg")
 def say(text, number=None):
     """Show a message in the card. With a number it shows the gold badge and highlights the card."""
     msg_el.innerText = text
+    result.classList.remove("jackpot")
     if number is None:
         num_el.style.display = "none"
         result.classList.remove("won")
@@ -86,6 +106,170 @@ def say(text, number=None):
         num_el.innerText = "#%d" % number
         num_el.style.display = "inline-block"
         result.classList.add("won")
+
+
+# ---- Special effects -----------------------------------------------------------
+# Which effects fire is decided in effects.py. They are drawn on a see-through canvas
+# that covers the whole page (it never blocks clicks). People who ask their device for
+# reduced motion get the jackpot banner but no flying particles or wobble.
+fx = document.getElementById("fx")
+fxctx = fx.getContext("2d")
+banner = document.getElementById("banner")
+particles = []
+fx_running = False
+fx_last = None
+fx_w = 0
+fx_h = 0
+FXD = 1
+WOBBLE_MS = 1100  # how long the wheel teeters before settling
+WOBBLE_AMP = 0.55  # how far it teeters, in slices (can tip over a divider and back)
+CRUMB_COLORS = ["#d9a45a", "#c98f45", "#b8782f", "#e6b970", "#a8651f"]
+
+
+def reduced_motion():
+    try:
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    except Exception:
+        return False
+
+
+def spread(lo, hi):
+    return lo + (hi - lo) * random.random()
+
+
+def pick(items):
+    return items[random.randint(0, len(items) - 1)]
+
+
+def fx_size():
+    global fx_w, fx_h, FXD
+    FXD = 2 if window.devicePixelRatio > 1.5 else 1
+    fx_w = window.innerWidth
+    fx_h = window.innerHeight
+    fx.width = int(fx_w * FXD)
+    fx.height = int(fx_h * FXD)
+
+
+def add_particle(kind, x, y, vx, vy, size, color, life, g=900.0, drag=0.0, vr=0.0):
+    particles.append({"kind": kind, "x": x, "y": y, "vx": vx, "vy": vy, "size": size,
+                      "color": color, "max": life, "life": 0.0, "g": g, "drag": drag,
+                      "rot": random.random() * 6.28, "vr": vr, "flip": random.random() * 6.28})
+
+
+def pointer_pos():
+    """Where the pointer tip is on the screen."""
+    r = canvas.getBoundingClientRect()
+    k = r.width / (SIZE + PAD)
+    return r.left + (SIZE - 20) * k, r.top + SIZE / 2 * k
+
+
+def fx_crumbs(x, y):
+    for _ in range(80):
+        a = spread(-1.4, 1.4)
+        speed = spread(220, 640)
+        add_particle("crumb", x, y, speed * math.cos(a), speed * math.sin(a) - 160,
+                     spread(3, 7), pick(CRUMB_COLORS), spread(1.4, 2.6), vr=spread(-8, 8))
+    for _ in range(18):
+        a = spread(-1.5, 1.5)
+        speed = spread(200, 520)
+        add_particle("chip", x, y, speed * math.cos(a), speed * math.sin(a) - 200,
+                     spread(5, 9), "#5a3420", spread(1.5, 2.6), vr=spread(-6, 6))
+
+
+def fx_rain(n=26):
+    for _ in range(n):
+        add_particle("emoji", spread(0, fx_w), spread(-fx_h * 0.6, -30), spread(-30, 30),
+                     spread(120, 260), spread(22, 40), "", spread(6.0, 9.0), g=60.0, vr=spread(-3, 3))
+
+
+def fx_draw(p):
+    left = p["max"] - p["life"]
+    fxctx.globalAlpha = 1.0 if left > 0.6 else max(0.0, left / 0.6)
+    fxctx.save()
+    fxctx.translate(p["x"], p["y"])
+    fxctx.rotate(p["rot"])
+    kind = p["kind"]
+    s = p["size"]
+    if kind == "emoji":
+        fxctx.font = "%dpx serif" % int(s)
+        fxctx.textAlign = "center"
+        fxctx.textBaseline = "middle"
+        fxctx.fillText("🍪", 0, 0)
+    elif kind == "chip":
+        fxctx.beginPath()
+        fxctx.ellipse(0, 0, s, s * 0.7, 0, 0, 2 * math.pi)
+        fxctx.fillStyle = p["color"]
+        fxctx.fill()
+    else:  # crumb
+        fxctx.fillStyle = p["color"]
+        fxctx.fillRect(-s / 2, -s / 2, s, s * 0.8)
+    fxctx.restore()
+    fxctx.globalAlpha = 1.0
+
+
+def fx_step(now):
+    global fx_running, fx_last
+    dt = 0.016 if fx_last is None else min(0.05, (now - fx_last) / 1000)
+    fx_last = now
+    fxctx.setTransform(FXD, 0, 0, FXD, 0, 0)
+    fxctx.clearRect(0, 0, fx_w, fx_h)
+    alive = []
+    for p in particles:
+        p["life"] += dt
+        if p["life"] > p["max"]:
+            continue
+        p["vy"] += p["g"] * dt
+        keep = 1 - p["drag"] * dt
+        p["vx"] *= keep
+        p["vy"] *= keep
+        p["x"] += p["vx"] * dt
+        p["y"] += p["vy"] * dt
+        p["rot"] += p["vr"] * dt
+        p["flip"] += 6 * dt
+        if p["y"] > fx_h + 60:
+            continue
+        fx_draw(p)
+        alive.append(p)
+    particles[:] = alive
+    if alive:
+        window.requestAnimationFrame(fx_proxy)
+    else:
+        fxctx.clearRect(0, 0, fx_w, fx_h)
+        fx_running = False
+
+
+fx_proxy = create_proxy(fx_step)
+
+
+def fx_start():
+    global fx_running, fx_last
+    if not fx_running:
+        fx_running = True
+        fx_last = None
+        window.requestAnimationFrame(fx_proxy)
+
+
+def fire_effects(effects, number):
+    """Called when a spin has finished and the result is showing."""
+    if "jackpot" in effects:
+        banner.innerText = PHRASES[number]  # e.g. GOOD EVENING, taken straight from the list
+        banner.classList.remove("show")
+        banner.offsetWidth  # forces the browser to restart the banner animation
+        banner.classList.add("show")
+        result.classList.add("jackpot")
+    if reduced_motion():
+        return
+    if "crumbs" in effects or "rain" in effects or "jackpot" in effects:
+        fx_size()
+        if "crumbs" in effects:
+            x, y = pointer_pos()
+            fx_crumbs(x, y)
+        if "rain" in effects:
+            fx_rain()
+        if "jackpot" in effects:
+            fx_rain(90)  # a proper downpour of cookies
+        fx_start()
+
 
 groups = deal()  # the slices: each is a block of numbers
 count = len(groups)
@@ -432,6 +616,12 @@ def spin(force):
     groups[:] = deal()  # shuffle where the slices sit on the wheel
     build_body()
     number = random_number()  # any of ALL the numbers, each equally likely; force only changes the show
+    if FORCE_NUMBER:
+        number = FORCE_NUMBER  # testing only, never on the live site
+    effects = choose_effects(number)  # which special effects this spin gets
+    if FORCE_FX and number != JACKPOT_NUMBER:
+        effects = [FORCE_FX]
+    wobble = "wobble" in effects and not reduced_motion()
     index = group_index(groups, number)  # the slice that contains it
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
     duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force
@@ -442,24 +632,42 @@ def spin(force):
     start = angle
     total = (end_mod - start) % (2 * math.pi) + 2 * math.pi * turns
     t0 = [None]
+    t_end = [None]
+
+    def finish():
+        global angle, spinning, flap
+        angle = start + total
+        flap = 0.0
+        draw()
+        say(PHRASES[number], number)
+        counter_request("hit")  # count this finished spin
+        fire_effects(effects, number)
+        button.disabled = False
+        spinning = False
 
     def step(now):
-        global angle, spinning, flap
+        global angle, flap
         if t0[0] is None:
             t0[0] = now
         t = min((now - t0[0]) / duration, 1)
-        angle = start + total * (1 - (1 - t) ** 4)  # long slow crawl at the end
-        flap = min(1.0, (1 - t) * 8)  # the flapper relaxes as the wheel slows
-        draw()
         if t < 1:
-            window.requestAnimationFrame(step_proxy)
-        else:
-            flap = 0.0
+            angle = start + total * (1 - (1 - t) ** 4)  # long slow crawl at the end
+            flap = min(1.0, (1 - t) * 8)  # the flapper relaxes as the wheel slows
             draw()
-            say(PHRASES[number], number)
-            counter_request("hit")  # count this finished spin
-            button.disabled = False
-            spinning = False
+            window.requestAnimationFrame(step_proxy)
+            return
+        if wobble:
+            # the wheel teeters back and forth, tipping over a divider and back, then settles
+            if t_end[0] is None:
+                t_end[0] = now
+            tw = (now - t_end[0]) / WOBBLE_MS
+            if tw < 1:
+                angle = start + total + WOBBLE_AMP * extent * math.sin(tw * 3.5 * math.pi) * (1 - tw) ** 2
+                flap = 0.6
+                draw()
+                window.requestAnimationFrame(step_proxy)
+                return
+        finish()
 
     step_proxy = create_proxy(step)
     window.requestAnimationFrame(step_proxy)

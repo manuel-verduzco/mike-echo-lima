@@ -1,6 +1,7 @@
 import random
 import unittest
 
+from effects import EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, choose_effects
 from phrases import GROUPS, PHRASES, deal, group_index, label, random_number
 from spin_wheel import number_at_pointer, pick_number, target_angle
 
@@ -38,6 +39,34 @@ class WheelTests(unittest.TestCase):
         for count in (2, 8, 12, 24):
             for n in range(1, count + 1):
                 self.assertEqual(number_at_pointer(target_angle(n, count), count), n)
+
+
+class EffectTests(unittest.TestCase):
+    def test_landing_on_the_jackpot_number_always_fires_it(self):
+        for _ in range(200):
+            fx = choose_effects(JACKPOT_NUMBER)
+            self.assertIn("jackpot", fx)
+            self.assertIn("wobble", fx)  # the nail-biting teeter comes first
+
+    def test_other_numbers_never_get_the_jackpot(self):
+        for n in PHRASES:
+            if n != JACKPOT_NUMBER:
+                self.assertNotIn("jackpot", choose_effects(n, rand=lambda: 0.0))
+
+    def test_random_effect_chance_is_respected(self):
+        self.assertEqual(choose_effects(5, rand=lambda: 0.99), [])  # unlucky: nothing
+        self.assertEqual(choose_effects(5, rand=lambda: 0.0, randint=lambda a, b: 1), ["rain"])
+        fired = sum(1 for _ in range(20000) if choose_effects(5))
+        self.assertAlmostEqual(fired / 20000, EFFECT_CHANCE, delta=0.02)
+
+    def test_every_random_effect_can_happen(self):
+        seen = set()
+        for _ in range(2000):
+            seen.update(choose_effects(5))
+        self.assertEqual(seen, set(EFFECTS))
+
+    def test_the_jackpot_number_has_a_sentence_to_show(self):
+        self.assertIn(JACKPOT_NUMBER, PHRASES)  # the banner shows this sentence
 
 
 if __name__ == "__main__":

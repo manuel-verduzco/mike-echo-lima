@@ -8,6 +8,22 @@
   <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
   <style>
     a { color: #7cc4ff; }
+    /* Special effects: a see-through layer over the whole page that never blocks clicks. */
+    #fx { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 20; }
+    #banner { position: fixed; left: 50%; top: 38%; z-index: 21; pointer-events: none; opacity: 0; white-space: nowrap; font-size: clamp(1.8rem, 9.5vw, 4.4rem); font-weight: 900; letter-spacing: .04em; background: linear-gradient(180deg, #fff3b0, #ffc93c 55%, #e08a00); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 2px #6b3d00; filter: drop-shadow(0 6px 18px rgba(255, 190, 40, .75)); transform: translate(-50%, -50%) scale(.4); }
+    #banner.show { animation: jackpot-pop 2.8s ease both; }
+    @keyframes jackpot-pop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-6deg); }
+      12% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(2deg); }
+      22% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+      80% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+    }
+    /* The jackpot card: shimmering gold until the next spin. */
+    #result.jackpot { color: #3a2300; border-color: #fff3b0; background: linear-gradient(120deg, #ffe08a, #ffc93c 45%, #fff0b8 60%, #ffb800); background-size: 220% 100%; animation: jackpot-shine 1.6s linear infinite; box-shadow: 0 0 0 2px rgba(255, 220, 120, .85), 0 0 36px rgba(255, 190, 40, .75); }
+    #result.jackpot #num { background: #3a2300; color: #ffd45a; }
+    @keyframes jackpot-shine { to { background-position: -220% 0; } }
+    @media (prefers-reduced-motion: reduce) { #result.jackpot { animation: none; } }
     #counter { visibility: hidden; margin-top: 14px; min-height: 1.3em; font-size: .85rem; color: #9a9ab0; }
     small { font-size: .75rem; color: #6a6a7e; }
     small a { color: #8b95ad; }
@@ -80,6 +96,8 @@
   <p><small>Written in Python, running in your browser via
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
-  <script type="mpy" src="./web.py?v=27" config="./pyscript.toml?v=27"></script>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="banner" aria-hidden="true"></div>
+  <script type="mpy" src="./web.py?v=30" config="./pyscript.toml?v=30"></script>
 </body>
 </html>
