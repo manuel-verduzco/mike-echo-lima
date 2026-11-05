@@ -60,7 +60,7 @@
       #result { min-height: 7rem; }
       #result.won #msg { font-size: 1.35rem; }
     }
-    h1 { font-size: clamp(1.5rem, 7vw, 2rem); margin: 8px 0; }
+    h1 { font-size: clamp(1.5rem, 7vw, 2rem); margin: 8px 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     #power { width: min(300px, 80%); height: 16px; margin: 6px auto 14px; background: #2a2a38; border-radius: 8px; overflow: hidden; border: 1px solid #44445a; }
     #fill { height: 100%; width: 0; background: hsl(130,80%,50%); }
     button { user-select: none; -webkit-user-select: none; touch-action: none; font-size: 1.1rem; font-weight: bold; padding: 14px 48px; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
@@ -106,6 +106,6 @@
   <audio id="player" preload="none"></audio>
   <canvas id="fx" aria-hidden="true"></canvas>
   <div id="banner" aria-hidden="true"></div>
-  <script type="mpy" src="./web.py?v=34" config="./pyscript.toml?v=34"></script>
+  <script type="mpy" src="./web.py?v=35" config="./pyscript.toml?v=35"></script>
 </body>
 </html>

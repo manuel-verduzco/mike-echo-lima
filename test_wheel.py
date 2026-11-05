@@ -3,7 +3,7 @@ import os
 import random
 import unittest
 
-from effects import EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, choose_effects
+from effects import EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, SECRET_GAP_MS, SECRET_TAPS, choose_effects, register_tap
 from phrases import GROUPS, PHRASES, deal, group_index, label, random_number
 from spin_wheel import number_at_pointer, pick_number, target_angle
 
@@ -68,6 +68,32 @@ class EffectTests(unittest.TestCase):
 
     def test_the_jackpot_number_has_a_sentence_to_show(self):
         self.assertIn(JACKPOT_NUMBER, PHRASES)  # the banner shows this sentence
+
+
+class SecretTapTests(unittest.TestCase):
+    def run_taps(self, times):
+        taps, triggered = [], []
+        for ms in times:
+            taps, hit = register_tap(taps, ms)
+            triggered.append(hit)
+        return triggered
+
+    def test_five_quick_taps_trigger_it(self):
+        self.assertEqual(self.run_taps([0, 300, 600, 900, 1200]), [False] * 4 + [True])
+
+    def test_four_taps_are_not_enough(self):
+        self.assertFalse(any(self.run_taps([0, 200, 400, 600])))
+
+    def test_a_pause_restarts_the_count(self):
+        gap = SECRET_GAP_MS + 1
+        self.assertFalse(any(self.run_taps([0, 200, 400, 400 + gap, 400 + gap + 200])))
+        # ...but five fresh quick taps after a pause do work
+        late = 10_000
+        self.assertTrue(self.run_taps([0, 200, late, late + 100, late + 200, late + 300, late + 400])[-1])
+
+    def test_it_resets_after_triggering(self):
+        quick = [i * 200 for i in range(SECRET_TAPS * 2)]
+        self.assertEqual(self.run_taps(quick).count(True), 2)  # 10 taps = two triggers
 
 
 class SoundManifestTests(unittest.TestCase):

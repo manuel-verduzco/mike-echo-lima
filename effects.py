@@ -21,3 +21,19 @@ def choose_effects(number, rand=random.random, randint=random.randint):
     if rand() < EFFECT_CHANCE:
         return [EFFECTS[randint(0, len(EFFECTS) - 1)]]
     return []
+
+
+# Secret shortcut: tap the page title SECRET_TAPS times in a row (each tap within
+# SECRET_GAP_MS of the one before) to make the next spin land on JACKPOT_NUMBER.
+SECRET_TAPS = 5
+SECRET_GAP_MS = 1500
+
+
+def register_tap(taps, now_ms):
+    """Record a tap at time `now_ms`. Returns (taps_so_far, triggered)."""
+    if taps and now_ms - taps[-1] > SECRET_GAP_MS:
+        taps = []  # too slow: start counting again
+    taps = taps + [now_ms]
+    if len(taps) >= SECRET_TAPS:
+        return [], True
+    return taps, False

@@ -7,7 +7,7 @@ import json
 import math
 import random
 
-from effects import JACKPOT_NUMBER, choose_effects
+from effects import JACKPOT_NUMBER, choose_effects, register_tap
 from phrases import PHRASES, deal, group_index, label, random_number
 from pyscript import document, window
 from pyscript.ffi import create_proxy
@@ -697,8 +697,34 @@ def release(event):
     spin(force)
 
 
+# ---- Secret shortcut: tap the title 5 times and the next spin lands on #1 -------------
+# Handy for showing the #1 special (and its sound) on a phone, where the test options in
+# the web address are switched off on the live site. A spin forced this way is not added to
+# the worldwide counter.
+secret_armed = False
+secret_taps = []
+
+
+def title_tap(event):
+    global secret_armed, secret_taps
+    if spinning or charging:
+        return
+    secret_taps, triggered = register_tap(secret_taps, window.Date.now())
+    if not triggered:
+        return
+    secret_armed = not secret_armed  # five more taps switch it off again
+    if secret_armed:
+        say("🍪 Secret on: the next spin lands on #%d" % JACKPOT_NUMBER)
+    else:
+        say("Secret off: back to a random spin")
+    try:
+        window.navigator.vibrate(60)  # a little buzz on phones that support it
+    except Exception:
+        pass
+
+
 def spin(force):
-    global spinning
+    global spinning, secret_armed
     if spinning:
         return
     spinning = True
@@ -711,6 +737,10 @@ def spin(force):
     number = random_number()  # any of ALL the numbers, each equally likely; force only changes the show
     if FORCE_NUMBER:
         number = FORCE_NUMBER  # testing only, never on the live site
+    secret = secret_armed
+    if secret:
+        number = JACKPOT_NUMBER
+        secret_armed = False  # it works for one spin only
     effects = choose_effects(number)  # which special effects this spin gets
     if FORCE_FX and number != JACKPOT_NUMBER:
         effects = [FORCE_FX]
@@ -731,7 +761,8 @@ def spin(force):
         flap = 0.0
         draw()
         say(PHRASES[number], number)
-        counter_request("hit")  # count this finished spin
+        if not secret:
+            counter_request("hit")  # count this finished spin (forced ones do not count)
         play_sound(number)  # its own voice note / sound, if you added one
         fire_effects(effects, number)
         button.disabled = False
@@ -763,6 +794,7 @@ window.addEventListener("pointercancel", create_proxy(release))
 # keyboard users (Enter/Space on the button) get a medium spin
 button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
 document.getElementById("swap").addEventListener("click", create_proxy(next_theme))
+document.querySelector("h1").addEventListener("click", create_proxy(title_tap))
 mute_btn.addEventListener("click", create_proxy(toggle_mute))
 saved = None
 try:
