@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spin the Wheel</title>
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; text-align: center; background: #f4f4f8; margin: 0; padding: 16px; }
+    canvas { max-width: 100%; height: auto; cursor: pointer; }
+    #result { font-size: 1.3rem; font-weight: bold; min-height: 5rem; max-width: 460px; margin: 8px auto; }
+    button { font-size: 1.1rem; font-weight: bold; padding: 10px 32px; border-radius: 8px; border: 0; background: #118ab2; color: #fff; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+  </style>
+</head>
+<body>
+  <h1>Spin the Wheel</h1>
+  <canvas id="wheel" width="460" height="480"></canvas>
+  <div id="result">Loading Python...</div>
+  <button id="spin" disabled>SPIN</button>
+  <p><small>Written in Python, running in your browser via
+    <a href="https://pyscript.net">PyScript</a>.
+    <a href="https://github.com/">Source on GitHub</a></small></p>
+  <script type="mpy" src="./web.py" config="./pyscript.toml"></script>
+</body>
+</html>
