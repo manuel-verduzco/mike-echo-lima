@@ -29,8 +29,10 @@ on some Linux distros install `python3-tk`).
 ## Make it yours
 
 Edit [`phrases.json`](phrases.json): each number maps to a saying. Add as many as
-you like. Every number is on the wheel, in a random order that reshuffles on every
-spin. (Set `SLICES` in [`phrases.py`](phrases.py) to show only some of them.)
+you like. The numbers are combined into 24 slices (like "1-5", "6-10"), shuffled
+into new positions every spin. One number is picked at random from ALL of them, so
+every sentence is equally likely, and the wheel stops on the slice that holds it.
+Change `GROUPS` in [`phrases.py`](phrases.py) for more or fewer slices.
 
 ## Files
 

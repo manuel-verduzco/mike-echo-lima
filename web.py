@@ -6,7 +6,7 @@ Uses the same phrases.py as the desktop version.
 import math
 import random
 
-from phrases import PHRASES, deal
+from phrases import PHRASES, deal, group_index, label, random_number
 from pyscript import document, window
 from pyscript.ffi import create_proxy
 
@@ -25,10 +25,10 @@ fill = document.getElementById("fill")
 power = document.getElementById("power")
 hint = document.getElementById("hint")
 
-numbers = deal()
-count = len(numbers)
+groups = deal()  # the slices: each is a block of numbers
+count = len(groups)
 extent = 2 * math.pi / count
-angle = -math.pi / 2 - extent / 2  # radians, clockwise from 3 o'clock; number 1 under the pointer
+angle = -math.pi / 2 - extent / 2  # radians, clockwise from 3 o'clock; first slice under the pointer
 spinning = False
 charging = False
 charge_start = None
@@ -69,6 +69,11 @@ FLECKS = [(0.15, 0.30), (0.22, 0.80), (0.38, 0.12), (0.40, 0.88), (0.58, 0.50), 
           (0.64, 0.85), (0.80, 0.20), (0.80, 0.80), (0.93, 0.25), (0.93, 0.75), (0.45, 0.50)]
 # chocolate chips: (radius fraction, angle fraction across slice, size)
 CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.88, 0.70, 5), (0.20, 0.75, 5)]
+
+
+# Where the texture goes so it stays clear of the labels (set in build_body).
+hole_rings = ((0.28, 12), (0.73, 40))
+chip_bands = ((0.12, 0.46), (0.67, 0.79))
 
 
 def dot(x, y, size, color):
@@ -140,7 +145,7 @@ def dense_digestive(cx, cy, inner):
     for _ in range(90):
         x, y = polar(cx, cy, inner * math.sqrt(rnd()), rnd() * 2 * math.pi)
         dot(x, y, 1.3, "#a6702f")
-    for rf, holes in ((0.28, 12), (0.73, 40)):
+    for rf, holes in hole_rings:
         for k in range(holes):
             x, y = polar(cx, cy, inner * rf, k * 2 * math.pi / holes)
             dot(x, y, 3, "#bd8a45")
@@ -168,7 +173,7 @@ def dense_choc(cx, cy, inner):
 
 def dense_cookie(cx, cy, inner):
     reseed()
-    for lo, hi in ((0.12, 0.46), (0.67, 0.79)):
+    for lo, hi in chip_bands:
         for j in range(14):
             a = rnd() * 2 * math.pi
             x, y = polar(cx, cy, inner * (lo + (hi - lo) * rnd()), a)
@@ -207,9 +212,16 @@ theme_name = "digestive"
 def build_body():
     """Draw the biscuit (at rotation 0) into the hidden canvas. Call after the
     biscuit or the order of the numbers changes."""
-    global ctx
+    global ctx, hole_rings, chip_bands
     th = THEMES[theme_name]
     dense = count >= DENSE
+    radial = dense or max(len(label(g)) for g in groups) > 3  # long labels run along the slice
+    if not dense:
+        hole_rings = ((0.2, 10), (0.90, 44))
+        chip_bands = ((0.10, 0.36), (0.88, 0.95))
+    else:
+        hole_rings = ((0.28, 12), (0.73, 40))
+        chip_bands = ((0.12, 0.46), (0.67, 0.79))
     main_ctx = ctx
     ctx = bctx
     try:
@@ -240,9 +252,9 @@ def build_body():
             ctx.strokeStyle = th["line"]
             ctx.lineWidth = 0.8 if dense else 2
             ctx.stroke()
-            if not dense:
+            if not radial:
                 th["deco"](cx, cy, inner, a0)
-        if dense:
+        if radial:
             th["dense"](cx, cy, inner)
         if th["after"]:
             th["after"](cx, cy, inner)
@@ -250,7 +262,8 @@ def build_body():
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.lineJoin = "round"
-        for i, n in enumerate(numbers):
+        for i, g in enumerate(groups):
+            text = label(g)
             mid = i * extent + extent / 2
             ctx.strokeStyle = th["halo"]
             ctx.fillStyle = th["text"]
@@ -262,15 +275,25 @@ def build_body():
                 ctx.save()
                 ctx.translate(cx, cy)
                 ctx.rotate(mid)
-                ctx.strokeText(str(n), rad, 0)
-                ctx.fillText(str(n), rad, 0)
+                ctx.strokeText(text, rad, 0)
+                ctx.fillText(text, rad, 0)
+                ctx.restore()
+            elif radial:
+                # block labels like "101-106" run along the slice, one ring
+                ctx.font = "bold 15px sans-serif"
+                ctx.lineWidth = 4
+                ctx.save()
+                ctx.translate(cx, cy)
+                ctx.rotate(mid)
+                ctx.strokeText(text, inner * 0.64, 0)
+                ctx.fillText(text, inner * 0.64, 0)
                 ctx.restore()
             else:
                 tx, ty = polar(cx, cy, inner * th["text_r"], mid)
                 ctx.font = "bold 24px sans-serif"
                 ctx.lineWidth = 5
-                ctx.strokeText(str(n), tx, ty)
-                ctx.fillText(str(n), tx, ty)
+                ctx.strokeText(text, tx, ty)
+                ctx.fillText(text, tx, ty)
     finally:
         ctx = main_ctx
 
@@ -370,9 +393,10 @@ def spin(force):
     button.disabled = True
     power.style.visibility = "hidden"  # bar disappears on release
     result.innerText = "Spinning..."
-    numbers[:] = deal()  # shuffle which numbers sit where on the wheel
+    groups[:] = deal()  # shuffle where the slices sit on the wheel
     build_body()
-    index = random.randint(0, count - 1)  # the result is random; force only changes the show
+    number = random_number()  # any of ALL the numbers, each equally likely; force only changes the show
+    index = group_index(groups, number)  # the slice that contains it
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
     duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force
     # angle that centres segment `index` under the pointer (top = -pi/2)
@@ -391,8 +415,7 @@ def spin(force):
         if t < 1:
             window.requestAnimationFrame(step_proxy)
         else:
-            key = numbers[index]
-            result.innerText = "#%d\n%s" % (key, PHRASES[key])
+            result.innerText = "#%d\n%s" % (number, PHRASES[number])
             button.disabled = False
             spinning = False
 

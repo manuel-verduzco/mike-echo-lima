@@ -8,7 +8,7 @@ import math
 import random
 import tkinter as tk
 
-from phrases import PHRASES, deal
+from phrases import PHRASES, deal, group_index, label, random_number
 
 COLORS = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#9b5de5", "#f78c6b"]
 SIZE = 460
@@ -40,8 +40,8 @@ def number_at_pointer(angle: float, count: int) -> int:
 class WheelApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.numbers = deal()
-        self.count = len(self.numbers)
+        self.groups = deal()  # slices: each is a block of numbers, e.g. 1-5
+        self.count = len(self.groups)
         self.angle = 90 - 0.5 * (360 / self.count)  # start on number 1
         self.spinning = False
 
@@ -75,20 +75,18 @@ class WheelApp:
         radius = (SIZE - 2 * MARGIN) / 2
         extent = 360 / self.count
 
-        for i, number in enumerate(self.numbers):
+        for i, group in enumerate(self.groups):
+            text = label(group)
             start = self.angle + i * extent
             c.create_arc(*box, start=start, extent=extent, fill=COLORS[i % len(COLORS)],
                          outline="white", width=2)
             mid = math.radians(start + extent / 2)
             tx = cx + radius * 0.75 * math.cos(mid)
             ty = cy - radius * 0.75 * math.sin(mid)
-            if self.count > 24:  # lots of slices: small numbers running along each slice
-                c.create_text(cx + radius * 0.84 * math.cos(mid), cy - radius * 0.84 * math.sin(mid),
-                              text=str(number), font=("Segoe UI", 7, "bold"), fill="white",
-                              angle=math.degrees(mid))
-            else:
-                c.create_text(tx, ty, text=str(number), font=("Segoe UI", 16, "bold"),
-                              fill="white")
+            # labels run along their slice, so even long ones like "101-106" fit
+            c.create_text(cx + radius * 0.72 * math.cos(mid), cy - radius * 0.72 * math.sin(mid),
+                          text=text, font=("Segoe UI", 8 if self.count > 24 else 10, "bold"),
+                          fill="white", angle=math.degrees(mid))
 
         c.create_oval(cx - 22, cy - 22, cx + 22, cy + 22, fill=BG, outline="white", width=3)
         # pointer at the top
@@ -101,9 +99,9 @@ class WheelApp:
         self.button.config(state="disabled")
         self.result.config(text="Spinning...")
 
-        self.numbers = deal()  # new random arrangement of numbers on the wheel
-        number = pick_number(self.count)
-        index = number - 1
+        self.groups = deal()  # new random arrangement of the slices
+        number = random_number()  # any of ALL the numbers, each equally likely
+        index = group_index(self.groups, number)  # the slice that contains it
         # Rotate clockwise (decreasing angle) a few full turns, then settle.
         start = self.angle
         end_mod = target_angle(index + 1, self.count)
@@ -121,8 +119,7 @@ class WheelApp:
             self.finish(number)
 
     def finish(self, number: int) -> None:
-        key = self.numbers[number - 1]
-        self.result.config(text=f"#{key}\n{PHRASES[key]}")
+        self.result.config(text=f"#{number}\n{PHRASES[number]}")
         self.spinning = False
         self.button.config(state="normal")
 
