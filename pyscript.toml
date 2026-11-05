@@ -1,3 +1,6 @@
+# Left side = where to download from (the ?v= forces browsers to fetch fresh copies
+# after each update - bump it whenever phrases.py or phrases.json change).
+# Right side = where the file lands inside the browser's Python.
 [files]
-"./phrases.py" = "./phrases.py"
-"./phrases.json" = "./phrases.json"
+"./phrases.py?v=13" = "./phrases.py"
+"./phrases.json?v=13" = "./phrases.json"
