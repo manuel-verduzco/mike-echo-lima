@@ -1,13 +1,20 @@
 import random
 import unittest
 
-from phrases import PHRASES
+from phrases import PHRASES, SLICES, deal
 from spin_wheel import number_at_pointer, pick_number, target_angle
 
 
 class WheelTests(unittest.TestCase):
     def test_phrases_are_numbered_1_to_n(self):
         self.assertEqual(sorted(PHRASES), list(range(1, len(PHRASES) + 1)))
+
+    def test_deal_is_distinct_and_valid(self):
+        for _ in range(50):
+            d = deal()
+            self.assertEqual(len(d), SLICES)
+            self.assertEqual(len(set(d)), SLICES)
+            self.assertTrue(all(n in PHRASES for n in d))
 
     def test_pick_number_in_range(self):
         rng = random.Random(1)

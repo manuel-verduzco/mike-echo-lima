@@ -6,7 +6,7 @@ Uses the same phrases.py as the desktop version.
 import math
 import random
 
-from phrases import PHRASES
+from phrases import PHRASES, deal
 from pyscript import document, window
 from pyscript.ffi import create_proxy
 
@@ -25,7 +25,7 @@ fill = document.getElementById("fill")
 power = document.getElementById("power")
 hint = document.getElementById("hint")
 
-numbers = sorted(PHRASES)
+numbers = deal()
 count = len(numbers)
 extent = 2 * math.pi / count
 angle = -math.pi / 2 - extent / 2  # radians, clockwise from 3 o'clock; number 1 under the pointer
@@ -259,6 +259,7 @@ def spin(force):
     button.disabled = True
     power.style.visibility = "hidden"  # bar disappears on release
     result.innerText = "Spinning..."
+    numbers[:] = deal()  # shuffle which numbers sit where on the wheel
     index = random.randint(0, count - 1)  # the result is random; force only changes the show
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
     duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force

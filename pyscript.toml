@@ -1,2 +1,3 @@
 [files]
 "./phrases.py" = "./phrases.py"
+"./phrases.json" = "./phrases.json"

@@ -8,7 +8,7 @@ import math
 import random
 import tkinter as tk
 
-from phrases import PHRASES
+from phrases import PHRASES, deal
 
 COLORS = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#9b5de5", "#f78c6b"]
 SIZE = 460
@@ -40,8 +40,8 @@ def number_at_pointer(angle: float, count: int) -> int:
 class WheelApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.count = len(PHRASES)
-        self.numbers = sorted(PHRASES)
+        self.numbers = deal()
+        self.count = len(self.numbers)
         self.angle = 90 - 0.5 * (360 / self.count)  # start on number 1
         self.spinning = False
 
@@ -96,6 +96,7 @@ class WheelApp:
         self.button.config(state="disabled")
         self.result.config(text="Spinning...")
 
+        self.numbers = deal()  # new random arrangement of numbers on the wheel
         number = pick_number(self.count)
         index = number - 1
         # Rotate clockwise (decreasing angle) a few full turns, then settle.

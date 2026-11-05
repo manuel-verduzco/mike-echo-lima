@@ -1,20 +1,35 @@
-"""The sayings on the wheel. Edit this file to make the game your own!
+"""Loads the sayings from phrases.json (edit that file to make the game your own!).
 
-Each number on the wheel (1..N) maps to one phrase. Add or remove entries
-and the wheel resizes itself automatically (keep it between 2 and 24).
+phrases.json maps a number to its saying, e.g. {"1": "Good evening", "2": "..."}.
+The wheel shows SLICES of those numbers at a time, dealt in a random order, so
+every spin the numbers are in different places.
 """
 
-PHRASES = {
-    1: "Today is a great day to start something new.",
-    2: "A smile is the cheapest way to change the world.",
-    3: "You miss 100% of the shots you don't take.",
-    4: "Go drink some water. Seriously.",
-    5: "Fortune favours the bold!",
-    6: "Do a little dance. Nobody's watching.",
-    7: "Lucky number seven: something good is coming.",
-    8: "Call someone you haven't talked to in a while.",
-    9: "Slow progress is still progress.",
-    10: "You're doing better than you think.",
-    11: "Take a deep breath. You've got this.",
-    12: "Be the reason someone smiles today.",
-}
+import json
+import random
+
+SLICES = 12  # how many numbers are on the wheel at once (2-24 looks best)
+
+
+def _load():
+    try:
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phrases.json")
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:  # e.g. in the browser, where the file sits in the working folder
+        with open("phrases.json") as f:
+            return json.load(f)
+
+
+PHRASES = {int(k): v for k, v in _load().items()}
+
+
+def deal(slices=SLICES):
+    """Return `slices` distinct numbers from PHRASES in a random order."""
+    pool = sorted(PHRASES)
+    slices = min(slices, len(pool))
+    for i in range(slices):  # partial Fisher-Yates shuffle (works in MicroPython too)
+        j = random.randint(i, len(pool) - 1)
+        pool[i], pool[j] = pool[j], pool[i]
+    return pool[:slices]

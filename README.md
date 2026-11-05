@@ -28,14 +28,15 @@ on some Linux distros install `python3-tk`).
 
 ## Make it yours
 
-Edit [`phrases.py`](phrases.py). Each number maps to a phrase; add or remove
-entries (2-24) and the wheel resizes itself.
+Edit [`phrases.json`](phrases.json): each number maps to a saying. Add as many as
+you like. The wheel shows 12 random numbers at a time in a random order and reshuffles
+on every spin (change `SLICES` in [`phrases.py`](phrases.py) for more or fewer).
 
 ## Files
 
 - `spin_wheel.py` - desktop version (tkinter)
 - `index.html`, `web.py`, `pyscript.toml` - browser version (PyScript)
-- `phrases.py` - the sayings, shared by both
+- `phrases.json` - the sayings; `phrases.py` loads them and deals the wheel (shared by both)
 
 ## Tests
 
