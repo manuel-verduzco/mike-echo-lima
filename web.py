@@ -12,7 +12,7 @@ from pyscript.ffi import create_proxy
 
 COLORS = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#9b5de5", "#f78c6b"]
 SIZE = 460
-TOP = 20
+PAD = 20  # extra room on the right for the pointer
 CHARGE_MS = 1500  # time holding to reach full force
 MIN_SPIN_MS, MAX_SPIN_MS = 2000, 6000
 MIN_TURNS, MAX_TURNS = 2, 10
@@ -28,7 +28,8 @@ hint = document.getElementById("hint")
 groups = deal()  # the slices: each is a block of numbers
 count = len(groups)
 extent = 2 * math.pi / count
-angle = -math.pi / 2 - extent / 2  # radians, clockwise from 3 o'clock; first slice under the pointer
+angle = -extent / 2  # radians; the pointer sits at 3 o'clock, first slice starts under it
+flap = 0.0  # how hard the wheel is currently pushing the pointer (0 when still)
 spinning = False
 charging = False
 charge_start = None
@@ -36,8 +37,8 @@ charge_start = None
 
 DPR = 2  # draw at 2x resolution so the small numbers stay crisp
 DENSE = 25  # with this many slices or more, numbers run along each slice
-canvas.width = SIZE * DPR
-canvas.height = (SIZE + TOP + 20) * DPR
+canvas.width = (SIZE + PAD) * DPR
+canvas.height = SIZE * DPR
 # The wheel itself is drawn once into this hidden canvas, then just rotated each frame.
 body = document.createElement("canvas")
 body.width = SIZE * DPR
@@ -247,9 +248,9 @@ def build_body():
 def draw():
     th = THEMES[theme_name]
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
-    ctx.clearRect(0, 0, SIZE, SIZE + TOP + 20)
+    ctx.clearRect(0, 0, SIZE + PAD, SIZE)
     cx = SIZE / 2
-    cy = TOP + SIZE / 2
+    cy = SIZE / 2
     ctx.save()
     ctx.translate(cx, cy)
     ctx.rotate(angle)
@@ -278,14 +279,27 @@ def draw():
     ctx.strokeStyle = th["halo"]
     ctx.lineWidth = 3
     ctx.stroke()
-    # pointer at top
+    # Pointer on the right: a flexible flapper. Each divider between slices pushes it
+    # as it goes past, then it springs back, like the flapper on a real prize wheel.
+    theta = (-angle) % (2 * math.pi)  # where the pointer sits in the wheel own coordinates
+    u = (theta / extent) % 1.0  # 0..1 across the slice under the pointer
+    push = max(0.0, 1 - u / 0.3) * 0.55 * flap
+    tip_x = cx + (SIZE / 2 - 10) - 10
+    ctx.save()
+    ctx.translate(tip_x + 38, cy)
+    ctx.rotate(-push)
     ctx.beginPath()
-    ctx.moveTo(cx - 14, 0)
-    ctx.lineTo(cx + 14, 0)
-    ctx.lineTo(cx, 34)
+    ctx.moveTo(-38, 0)
+    ctx.lineTo(0, -15)
+    ctx.lineTo(0, 15)
     ctx.closePath()
     ctx.fillStyle = "#ffffff"
     ctx.fill()
+    ctx.strokeStyle = "#14141c"
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.restore()
+    dot(tip_x + 38, cy, 5, "#14141c")
 
 
 def set_theme(name, save=True):
@@ -359,22 +373,27 @@ def spin(force):
     index = group_index(groups, number)  # the slice that contains it
     turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
     duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force
-    # angle that centres segment `index` under the pointer (top = -pi/2)
-    end_mod = (-math.pi / 2 - (index + 0.5) * extent) % (2 * math.pi)
+    # Stop somewhere inside that slice (not always dead centre, like a real wheel):
+    # u is how far across the slice the pointer ends up, kept off the dividers.
+    u = 0.12 + 0.76 * random.random()
+    end_mod = (-(index + u) * extent) % (2 * math.pi)
     start = angle
     total = (end_mod - start) % (2 * math.pi) + 2 * math.pi * turns
     t0 = [None]
 
     def step(now):
-        global angle, spinning
+        global angle, spinning, flap
         if t0[0] is None:
             t0[0] = now
         t = min((now - t0[0]) / duration, 1)
-        angle = start + total * (1 - (1 - t) ** 3)
+        angle = start + total * (1 - (1 - t) ** 4)  # long slow crawl at the end
+        flap = min(1.0, (1 - t) * 8)  # the flapper relaxes as the wheel slows
         draw()
         if t < 1:
             window.requestAnimationFrame(step_proxy)
         else:
+            flap = 0.0
+            draw()
             result.innerText = "#%d\n%s" % (number, PHRASES[number])
             button.disabled = False
             spinning = False
