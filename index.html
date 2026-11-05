@@ -9,16 +9,17 @@
   <style>
     a { color: #7cc4ff; }
     small { color: #9a9ab0; }
-    body { font-family: system-ui, sans-serif; text-align: center; background: #14141c; color: #f1f1f6; margin: 0; padding: 16px; }
-    canvas { max-width: 100%; height: auto; cursor: pointer; }
-    #result { font-size: 1.3rem; font-weight: bold; min-height: 5rem; max-width: 460px; margin: 8px auto; }
-    button { font-size: 1.1rem; font-weight: bold; padding: 10px 32px; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
+    body { font-family: system-ui, sans-serif; text-align: center; background: #14141c; color: #f1f1f6; margin: 0; padding: 8px 12px 24px; }
+    canvas { width: 100%; max-width: 460px; height: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    #result { font-size: clamp(1.05rem, 4.5vw, 1.3rem); font-weight: bold; min-height: 5.5rem; max-width: 460px; margin: 8px auto; padding: 0 8px; white-space: pre-line; }
+    h1 { font-size: clamp(1.5rem, 7vw, 2rem); margin: 8px 0; }
+    button { font-size: 1.1rem; font-weight: bold; padding: 14px 48px; touch-action: manipulation; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
     button:disabled { opacity: .5; cursor: default; }
   </style>
 </head>
 <body>
   <h1>Spin the Wheel</h1>
-  <canvas id="wheel" width="460" height="480"></canvas>
+  <canvas id="wheel" width="460" height="500"></canvas>
   <div id="result">Loading Python...</div>
   <button id="spin" disabled>SPIN</button>
   <p><small>Written in Python, running in your browser via
