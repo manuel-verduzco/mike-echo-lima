@@ -112,8 +112,8 @@ def say(text, number=None):
 # ---- Sounds ---------------------------------------------------------------------
 # sounds.json says which sentence plays which audio file, e.g. {"37": "apple.mp3"}. The
 # files live in the sounds/ folder. A sound plays when its sentence comes up, and there
-# is a mute button (only shown once at least one sound exists). No sounds.json entries
-# means the game is silent, exactly as before.
+# is a mute button (always visible). No sounds.json entries means the game is silent,
+# exactly as before.
 SOUNDS = {}
 player = document.getElementById("player")
 mute_btn = document.getElementById("mute")
@@ -194,8 +194,6 @@ def load_sounds():
             ok = isinstance(name, str) and name and "/" not in name and "\\" not in name and ".." not in name
             if key.isdigit() and ok:
                 SOUNDS[int(key)] = name
-        if SOUNDS:
-            mute_btn.hidden = False
 
     try:
         window.fetch(url).then(create_proxy(on_response)).then(create_proxy(on_text)).catch(create_proxy(lambda e: None))

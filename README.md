@@ -34,7 +34,7 @@ no flying particles.
 
 Record a voice note (or use any mp3) and the game can play it when a sentence comes up. Drop the
 file in the [`sounds`](sounds) folder and add a line to [`sounds.json`](sounds.json), for example
-`{"37": "apple-in-bowl.mp3"}`. A speaker button appears on the wheel so people can mute it. The
+`{"37": "apple-in-bowl.mp3"}`. A speaker button on the wheel lets people mute it. The
 folder's [README](sounds/README.md) has the details and tips. Sentences with no entry stay silent.
 
 ## Global spin counter
