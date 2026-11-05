@@ -13,18 +13,24 @@ from pyscript.ffi import create_proxy
 COLORS = ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#9b5de5", "#f78c6b"]
 SIZE = 460
 TOP = 20
-SPIN_MS = 4000
+CHARGE_MS = 1500  # time holding to reach full force
+MIN_SPIN_MS, MAX_SPIN_MS = 2000, 6000
+MIN_TURNS, MAX_TURNS = 2, 10
 
 canvas = document.getElementById("wheel")
 ctx = canvas.getContext("2d")
 result = document.getElementById("result")
 button = document.getElementById("spin")
+fill = document.getElementById("fill")
+hint = document.getElementById("hint")
 
 numbers = sorted(PHRASES)
 count = len(numbers)
 extent = 2 * math.pi / count
 angle = -math.pi / 2 - extent / 2  # radians, clockwise from 3 o'clock; number 1 under the pointer
 spinning = False
+charging = False
+charge_start = None
 
 
 def draw():
@@ -66,26 +72,66 @@ def draw():
     ctx.fill()
 
 
-def spin(event=None):
+def set_force(f):
+    fill.style.width = "%d%%" % int(f * 100)
+    # green -> red as force grows
+    fill.style.background = "hsl(%d, 80%%, 50%%)" % int(130 - 130 * f)
+
+
+def charge_step(now):
+    global charge_start
+    if not charging:
+        return
+    if charge_start is None:
+        charge_start = now
+    set_force(min((now - charge_start) / CHARGE_MS, 1))
+    window.requestAnimationFrame(charge_proxy)
+
+
+def start_charge(event):
+    global charging, charge_start
+    event.preventDefault()
+    if spinning or charging:
+        return
+    charging = True
+    charge_start = None
+    result.innerText = "Charging... release to spin!"
+    window.requestAnimationFrame(charge_proxy)
+
+
+def release(event):
+    global charging
+    if not charging:
+        return
+    charging = False
+    force = min(max((window.performance.now() - charge_start) / CHARGE_MS, 0), 1) if charge_start else 0
+    spin(force)
+
+
+def spin(force):
     global spinning
     if spinning:
         return
     spinning = True
     button.disabled = True
+    set_force(force)
     result.innerText = "Spinning..."
-    index = random.randint(0, count - 1)
+    index = random.randint(0, count - 1)  # the result is random; force only changes the show
+    turns = MIN_TURNS + int(round((MAX_TURNS - MIN_TURNS) * force))
+    duration = MIN_SPIN_MS + (MAX_SPIN_MS - MIN_SPIN_MS) * force
     # angle that centres segment `index` under the pointer (top = -pi/2)
     end_mod = (-math.pi / 2 - (index + 0.5) * extent) % (2 * math.pi)
     start = angle
-    total = (end_mod - start) % (2 * math.pi) + 2 * math.pi * random.randint(4, 6)
+    total = (end_mod - start) % (2 * math.pi) + 2 * math.pi * turns
     t0 = [None]
 
     def step(now):
         global angle, spinning
         if t0[0] is None:
             t0[0] = now
-        t = min((now - t0[0]) / SPIN_MS, 1)
+        t = min((now - t0[0]) / duration, 1)
         angle = start + total * (1 - (1 - t) ** 3)
+        set_force(force * (1 - t))  # bar drains as the wheel slows
         draw()
         if t < 1:
             window.requestAnimationFrame(step_proxy)
@@ -99,8 +145,14 @@ def spin(event=None):
     window.requestAnimationFrame(step_proxy)
 
 
-button.addEventListener("click", create_proxy(spin))
-canvas.addEventListener("click", create_proxy(spin))
+charge_proxy = create_proxy(charge_step)
+for el in (canvas, button):
+    el.addEventListener("pointerdown", create_proxy(start_charge))
+    el.addEventListener("contextmenu", create_proxy(lambda e: e.preventDefault()))
+window.addEventListener("pointerup", create_proxy(release))
+window.addEventListener("pointercancel", create_proxy(release))
+# keyboard users (Enter/Space on the button) get a medium spin
+button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
 button.disabled = False
-result.innerText = "Click the wheel to spin!"
+result.innerText = "Hold the wheel to charge, release to spin!"
 draw()

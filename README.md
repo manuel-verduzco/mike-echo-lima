@@ -10,6 +10,10 @@ Built with only the Python standard library (tkinter), so there is nothing to in
 Once GitHub Pages is enabled, the game runs in any browser (the Python is executed
 by [PyScript](https://pyscript.net)): `https://<your-username>.github.io/<repo-name>/`
 
+In the browser version, **press and hold** the wheel (or the button) to charge the
+force bar, then release to spin. A longer hold means a harder, longer spin; a quick
+tap gives a gentle one. The result is random either way.
+
 ## Run it on your computer
 
 ```bash
