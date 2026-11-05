@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import re
 import unittest
 
 from effects import EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, SECRET_GAP_MS, SECRET_TAPS, choose_effects, register_tap
@@ -94,6 +95,34 @@ class SecretTapTests(unittest.TestCase):
     def test_it_resets_after_triggering(self):
         quick = [i * 200 for i in range(SECRET_TAPS * 2)]
         self.assertEqual(self.run_taps(quick).count(True), 2)  # 10 taps = two triggers
+
+
+class WebsiteFilesTests(unittest.TestCase):
+    """Guards against the "half old, half new files" error that cached versions can cause."""
+
+    def setUp(self):
+        self.here = os.path.dirname(os.path.abspath(__file__))
+
+        def read(name):
+            with open(os.path.join(self.here, name), encoding="utf-8") as f:
+                return f.read()
+
+        self.html, self.toml, self.web = read("index.html"), read("pyscript.toml"), read("web.py")
+        self.pattern = re.compile(r"\.(?:py|json|toml)\?v=(\d+)")
+
+    def test_every_game_file_uses_the_same_cache_version(self):
+        versions = set(self.pattern.findall(self.html) + self.pattern.findall(self.toml))
+        self.assertEqual(len(versions), 1,
+                         "different ?v= numbers found %s - run: python bump_version.py" % sorted(versions))
+
+    def test_every_local_module_web_py_imports_is_listed_in_pyscript_toml(self):
+        for name in re.findall(r"^from (\w+) import", self.web, flags=re.M):
+            if os.path.isfile(os.path.join(self.here, name + ".py")):
+                self.assertIn('"./%s.py?v=' % name, self.toml,
+                              "%s.py is imported by web.py but missing from pyscript.toml" % name)
+
+    def test_phrases_json_is_listed_in_pyscript_toml(self):
+        self.assertIn('"./phrases.json?v=', self.toml)
 
 
 class SoundManifestTests(unittest.TestCase):
