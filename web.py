@@ -198,8 +198,6 @@ def draw():
 def set_theme(name, save=True):
     global theme_name
     theme_name = name
-    for key in THEMES:
-        document.getElementById("pick-" + key).classList.toggle("active", key == name)
     if save:
         try:
             window.localStorage.setItem("biscuit", name)
@@ -208,8 +206,11 @@ def set_theme(name, save=True):
     draw()
 
 
-def make_picker(name):
-    return create_proxy(lambda e: set_theme(name))
+ORDER = ["digestive", "choc", "cookie"]
+
+
+def next_theme(event=None):
+    set_theme(ORDER[(ORDER.index(theme_name) + 1) % len(ORDER)])
 
 
 def set_force(f):
@@ -294,8 +295,7 @@ window.addEventListener("pointerup", create_proxy(release))
 window.addEventListener("pointercancel", create_proxy(release))
 # keyboard users (Enter/Space on the button) get a medium spin
 button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
-for key in THEMES:
-    document.getElementById("pick-" + key).addEventListener("click", make_picker(key))
+document.getElementById("swap").addEventListener("click", create_proxy(next_theme))
 saved = None
 try:
     saved = window.localStorage.getItem("biscuit")

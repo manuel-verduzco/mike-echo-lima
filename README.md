@@ -14,8 +14,8 @@ In the browser version, **press and hold** the wheel (or the button) to charge t
 force bar, then release to spin. A longer hold means a harder, longer spin; a quick
 tap gives a gentle one. The result is random either way.
 
-Pick your biscuit (Digestive, Choc Digestive or Choc Chip Cookie) with the buttons
-under the spin button; your choice is remembered.
+Tap the 🔄 button next to the wheel to change the biscuit (Digestive, Choc Digestive,
+Choc Chip Cookie); your choice is remembered.
 
 ## Run it on your computer
 

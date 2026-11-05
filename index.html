@@ -12,6 +12,9 @@
     body { font-family: system-ui, sans-serif; text-align: center; background: #14141c; color: #f1f1f6; margin: 0; padding: 8px 12px 24px; }
     canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; width: min(460px, 100%, calc((100vh - 120px) * 0.92)); height: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     #result { font-size: clamp(1.05rem, 4.5vw, 1.3rem); font-weight: bold; min-height: 5.5rem; width: 100%; max-width: 460px; margin: 8px auto; padding: 0 8px; white-space: pre-line; }
+    .wheel-wrap { position: relative; line-height: 0; }
+    #swap { position: absolute; left: 2%; bottom: 3%; width: 48px; height: 48px; padding: 0; border-radius: 50%; font-size: 1.4rem; line-height: 1; background: #2a2a38; border: 1px solid #44445a; touch-action: manipulation; }
+    #swap:active { transform: rotate(180deg); }
     .layout { display: flex; flex-direction: column; align-items: center; }
     .panel { display: flex; flex-direction: column; align-items: center; width: 100%; }
     @media (min-width: 760px) {
@@ -23,30 +26,25 @@
     #power { width: min(300px, 80%); height: 16px; margin: 6px auto 14px; background: #2a2a38; border-radius: 8px; overflow: hidden; border: 1px solid #44445a; }
     #fill { height: 100%; width: 0; background: hsl(130,80%,50%); }
     button { user-select: none; -webkit-user-select: none; touch-action: none; font-size: 1.1rem; font-weight: bold; padding: 14px 48px; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
-    #picker { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
-    button.pick { touch-action: manipulation; font-size: .9rem; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #2a2a38; color: #d8d8e6; border: 1px solid #44445a; }
-    button.pick.active { background: #e6b068; color: #3a1d0e; border-color: #e6b068; }
     button:disabled { opacity: .5; cursor: default; }
   </style>
 </head>
 <body>
   <h1>Spin the Bic Bic</h1>
   <div class="layout">
-    <canvas id="wheel" width="460" height="500"></canvas>
+    <div class="wheel-wrap">
+      <canvas id="wheel" width="460" height="500"></canvas>
+      <button id="swap" aria-label="Change biscuit" title="Change biscuit">🔄</button>
+    </div>
     <div class="panel">
       <div id="result">Loading Python...</div>
       <div id="power" aria-label="Spin force"><div id="fill"></div></div>
       <button id="spin" disabled>HOLD TO SPIN</button>
-      <div id="picker" role="group" aria-label="Choose your biscuit">
-        <button class="pick" id="pick-digestive">Digestive</button>
-        <button class="pick" id="pick-choc">Choc Digestive</button>
-        <button class="pick" id="pick-cookie">Choc Chip Cookie</button>
-      </div>
     </div>
   </div>
   <p><small>Written in Python, running in your browser via
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
-  <script type="mpy" src="./web.py?v=9" config="./pyscript.toml"></script>
+  <script type="mpy" src="./web.py?v=10" config="./pyscript.toml"></script>
 </body>
 </html>
