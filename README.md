@@ -29,8 +29,8 @@ on some Linux distros install `python3-tk`).
 ## Make it yours
 
 Edit [`phrases.json`](phrases.json): each number maps to a saying. Add as many as
-you like. The wheel shows 12 random numbers at a time in a random order and reshuffles
-on every spin (change `SLICES` in [`phrases.py`](phrases.py) for more or fewer).
+you like. Every number is on the wheel, in a random order that reshuffles on every
+spin. (Set `SLICES` in [`phrases.py`](phrases.py) to show only some of them.)
 
 ## Files
 

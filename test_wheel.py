@@ -12,8 +12,9 @@ class WheelTests(unittest.TestCase):
     def test_deal_is_distinct_and_valid(self):
         for _ in range(50):
             d = deal()
-            self.assertEqual(len(d), SLICES)
-            self.assertEqual(len(set(d)), SLICES)
+            expected = len(PHRASES) if SLICES is None else SLICES
+            self.assertEqual(len(d), expected)
+            self.assertEqual(len(set(d)), expected)
             self.assertTrue(all(n in PHRASES for n in d))
 
     def test_pick_number_in_range(self):

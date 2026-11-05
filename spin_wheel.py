@@ -82,8 +82,13 @@ class WheelApp:
             mid = math.radians(start + extent / 2)
             tx = cx + radius * 0.75 * math.cos(mid)
             ty = cy - radius * 0.75 * math.sin(mid)
-            c.create_text(tx, ty, text=str(number), font=("Segoe UI", 16, "bold"),
-                          fill="white")
+            if self.count > 24:  # lots of slices: small numbers running along each slice
+                c.create_text(cx + radius * 0.84 * math.cos(mid), cy - radius * 0.84 * math.sin(mid),
+                              text=str(number), font=("Segoe UI", 7, "bold"), fill="white",
+                              angle=math.degrees(mid))
+            else:
+                c.create_text(tx, ty, text=str(number), font=("Segoe UI", 16, "bold"),
+                              fill="white")
 
         c.create_oval(cx - 22, cy - 22, cx + 22, cy + 22, fill=BG, outline="white", width=3)
         # pointer at the top
