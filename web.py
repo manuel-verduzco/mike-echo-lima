@@ -34,25 +34,22 @@ charging = False
 charge_start = None
 
 
-BISCUIT = ["#e6b068", "#dba04f", "#eab874", "#d6994a"]
-CHOC = "#3b1f12"
-# chocolate chips per slice: (radius fraction, angle fraction across slice, size)
-CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.88, 0.70, 5), (0.20, 0.75, 5)]
+# A classic British digestive: golden, flecked with wheat, with docking holes.
+BISCUIT = ["#ebc582", "#e4ba74", "#eec98a", "#e0b46c"]
+CHOC = "#4a2a14"
+# (radius fraction, angle fraction across slice) for the round docking holes
+HOLES = [(0.30, 0.50), (0.50, 0.25), (0.50, 0.75), (0.72, 0.38), (0.72, 0.62), (0.88, 0.50)]
+# tiny wheat flecks: (radius fraction, angle fraction, size)
+FLECKS = [(0.15, 0.30, 1.6), (0.22, 0.80, 1.4), (0.38, 0.12, 1.5), (0.40, 0.88, 1.6),
+          (0.58, 0.50, 1.4), (0.62, 0.15, 1.6), (0.64, 0.85, 1.4), (0.80, 0.20, 1.5),
+          (0.80, 0.80, 1.6), (0.93, 0.25, 1.4), (0.93, 0.75, 1.5), (0.45, 0.50, 1.4)]
 
 
-def chip(x, y, size, rot):
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(rot)
+def dot(x, y, size, color):
     ctx.beginPath()
-    ctx.ellipse(0, 0, size, size * 0.7, 0, 0, 2 * math.pi)
-    ctx.fillStyle = CHOC
+    ctx.arc(x, y, size, 0, 2 * math.pi)
+    ctx.fillStyle = color
     ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(-size * 0.25, -size * 0.2, size * 0.35, size * 0.2, 0, 0, 2 * math.pi)
-    ctx.fillStyle = "#6b4228"
-    ctx.fill()
-    ctx.restore()
 
 
 def draw():
@@ -61,20 +58,17 @@ def draw():
     r = SIZE / 2 - 10
     ctx.clearRect(0, 0, SIZE, SIZE + TOP + 20)
 
-    # baked rim with a bumpy edge
+    # toasted rim with a finely fluted edge
     ctx.beginPath()
     ctx.arc(cx, cy, r, 0, 2 * math.pi)
-    ctx.fillStyle = "#a8651f"
+    ctx.fillStyle = "#c98f45"
     ctx.fill()
-    bumps = 36
-    for k in range(bumps):
-        a = angle + k * 2 * math.pi / bumps
-        ctx.beginPath()
-        ctx.arc(cx + (r - 3) * math.cos(a), cy + (r - 3) * math.sin(a), 9, 0, 2 * math.pi)
-        ctx.fillStyle = "#b9772f"
-        ctx.fill()
+    flutes = 72
+    for k in range(flutes):
+        a = angle + k * 2 * math.pi / flutes
+        dot(cx + (r - 1) * math.cos(a), cy + (r - 1) * math.sin(a), 5, "#d69d52")
 
-    inner = r - 12
+    inner = r - 9
     for i, n in enumerate(numbers):
         a0 = angle + i * extent
         ctx.beginPath()
@@ -83,20 +77,26 @@ def draw():
         ctx.closePath()
         ctx.fillStyle = BISCUIT[i % len(BISCUIT)]
         ctx.fill()
-        ctx.strokeStyle = "#8a5420"
+        ctx.strokeStyle = "#b7803c"
         ctx.lineWidth = 2
         ctx.stroke()
-        for j, (rf, af, size) in enumerate(CHIPS):
+        for rf, af, size in FLECKS:
             ca = a0 + af * extent
-            chip(cx + inner * rf * math.cos(ca), cy + inner * rf * math.sin(ca), size, ca + j)
+            dot(cx + inner * rf * math.cos(ca), cy + inner * rf * math.sin(ca), size, "#a6702f")
+        for rf, af in HOLES:
+            ca = a0 + af * extent
+            hx = cx + inner * rf * math.cos(ca)
+            hy = cy + inner * rf * math.sin(ca)
+            dot(hx, hy, 3.6, "#bd8a45")
+            dot(hx, hy, 2.2, "#8f5c24")
         mid = a0 + extent / 2
-        tx = cx + inner * 0.68 * math.cos(mid)
-        ty = cy + inner * 0.68 * math.sin(mid)
+        tx = cx + inner * 0.62 * math.cos(mid)
+        ty = cy + inner * 0.62 * math.sin(mid)
         ctx.font = "bold 24px sans-serif"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.lineWidth = 5
-        ctx.strokeStyle = "#f6e3bd"
+        ctx.strokeStyle = "#f8e8c8"
         ctx.strokeText(str(n), tx, ty)
         ctx.fillStyle = CHOC
         ctx.fillText(str(n), tx, ty)
@@ -106,7 +106,7 @@ def draw():
     ctx.arc(cx, cy, 22, 0, 2 * math.pi)
     ctx.fillStyle = CHOC
     ctx.fill()
-    ctx.strokeStyle = "#f6e3bd"
+    ctx.strokeStyle = "#f8e8c8"
     ctx.lineWidth = 3
     ctx.stroke()
     # pointer at top
