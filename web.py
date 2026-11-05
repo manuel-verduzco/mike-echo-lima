@@ -33,33 +33,79 @@ charging = False
 charge_start = None
 
 
+BISCUIT = ["#e6b068", "#dba04f", "#eab874", "#d6994a"]
+CHOC = "#3b1f12"
+# chocolate chips per slice: (radius fraction, angle fraction across slice, size)
+CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.88, 0.70, 5), (0.20, 0.75, 5)]
+
+
+def chip(x, y, size, rot):
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(rot)
+    ctx.beginPath()
+    ctx.ellipse(0, 0, size, size * 0.7, 0, 0, 2 * math.pi)
+    ctx.fillStyle = CHOC
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(-size * 0.25, -size * 0.2, size * 0.35, size * 0.2, 0, 0, 2 * math.pi)
+    ctx.fillStyle = "#6b4228"
+    ctx.fill()
+    ctx.restore()
+
+
 def draw():
     cx = SIZE / 2
     cy = TOP + SIZE / 2
     r = SIZE / 2 - 10
     ctx.clearRect(0, 0, SIZE, SIZE + TOP + 20)
+
+    # baked rim with a bumpy edge
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, 2 * math.pi)
+    ctx.fillStyle = "#a8651f"
+    ctx.fill()
+    bumps = 36
+    for k in range(bumps):
+        a = angle + k * 2 * math.pi / bumps
+        ctx.beginPath()
+        ctx.arc(cx + (r - 3) * math.cos(a), cy + (r - 3) * math.sin(a), 9, 0, 2 * math.pi)
+        ctx.fillStyle = "#b9772f"
+        ctx.fill()
+
+    inner = r - 12
     for i, n in enumerate(numbers):
         a0 = angle + i * extent
         ctx.beginPath()
         ctx.moveTo(cx, cy)
-        ctx.arc(cx, cy, r, a0, a0 + extent)
+        ctx.arc(cx, cy, inner, a0, a0 + extent)
         ctx.closePath()
-        ctx.fillStyle = COLORS[i % len(COLORS)]
+        ctx.fillStyle = BISCUIT[i % len(BISCUIT)]
         ctx.fill()
-        ctx.strokeStyle = "white"
+        ctx.strokeStyle = "#8a5420"
         ctx.lineWidth = 2
         ctx.stroke()
+        for j, (rf, af, size) in enumerate(CHIPS):
+            ca = a0 + af * extent
+            chip(cx + inner * rf * math.cos(ca), cy + inner * rf * math.sin(ca), size, ca + j)
         mid = a0 + extent / 2
-        ctx.fillStyle = "white"
-        ctx.font = "bold 22px sans-serif"
+        tx = cx + inner * 0.68 * math.cos(mid)
+        ty = cy + inner * 0.68 * math.sin(mid)
+        ctx.font = "bold 24px sans-serif"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
-        ctx.fillText(str(n), cx + r * 0.75 * math.cos(mid), cy + r * 0.75 * math.sin(mid))
+        ctx.lineWidth = 5
+        ctx.strokeStyle = "#f6e3bd"
+        ctx.strokeText(str(n), tx, ty)
+        ctx.fillStyle = CHOC
+        ctx.fillText(str(n), tx, ty)
+
+    # centre hub
     ctx.beginPath()
     ctx.arc(cx, cy, 22, 0, 2 * math.pi)
-    ctx.fillStyle = "#14141c"
+    ctx.fillStyle = CHOC
     ctx.fill()
-    ctx.strokeStyle = "white"
+    ctx.strokeStyle = "#f6e3bd"
     ctx.lineWidth = 3
     ctx.stroke()
     # pointer at top

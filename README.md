@@ -1,4 +1,4 @@
-# Spin the Wheel
+# Spin the Bic Bic
 
 A tiny, fun Python game: click the wheel, it spins, and you get a random number
 with a saying attached to it.
