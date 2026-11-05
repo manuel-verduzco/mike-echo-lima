@@ -18,6 +18,7 @@ MIN_SPIN_MS, MAX_SPIN_MS = 2000, 6000
 MIN_TURNS, MAX_TURNS = 2, 10
 
 canvas = document.getElementById("wheel")
+hit = document.getElementById("hit")  # the round clickable area over the wheel
 ctx = canvas.getContext("2d")
 result = document.getElementById("result")
 button = document.getElementById("spin")
@@ -403,7 +404,7 @@ def spin(force):
 
 
 charge_proxy = create_proxy(charge_step)
-for el in (canvas, button):
+for el in (hit, button):
     el.addEventListener("pointerdown", create_proxy(start_charge))
     el.addEventListener("contextmenu", create_proxy(lambda e: e.preventDefault()))
 window.addEventListener("pointerup", create_proxy(release))
