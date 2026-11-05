@@ -25,6 +25,20 @@ button = document.getElementById("spin")
 fill = document.getElementById("fill")
 power = document.getElementById("power")
 hint = document.getElementById("hint")
+num_el = document.getElementById("num")
+msg_el = document.getElementById("msg")
+
+
+def say(text, number=None):
+    """Show a message in the card. With a number it shows the gold badge and highlights the card."""
+    msg_el.innerText = text
+    if number is None:
+        num_el.style.display = "none"
+        result.classList.remove("won")
+    else:
+        num_el.innerText = "#%d" % number
+        num_el.style.display = "inline-block"
+        result.classList.add("won")
 
 groups = deal()  # the slices: each is a block of numbers
 count = len(groups)
@@ -347,7 +361,7 @@ def start_charge(event):
     charge_start = None
     set_force(0)
     power.style.visibility = "visible"
-    result.innerText = "Charging... release to spin!"
+    say("Charging... release to spin!")
     window.requestAnimationFrame(charge_proxy)
 
 
@@ -367,7 +381,7 @@ def spin(force):
     spinning = True
     button.disabled = True
     power.style.visibility = "hidden"  # bar disappears on release
-    result.innerText = "Spinning..."
+    say("Spinning...")
     groups[:] = deal()  # shuffle where the slices sit on the wheel
     build_body()
     number = random_number()  # any of ALL the numbers, each equally likely; force only changes the show
@@ -395,7 +409,7 @@ def spin(force):
         else:
             flap = 0.0
             draw()
-            result.innerText = "#%d\n%s" % (number, PHRASES[number])
+            say(PHRASES[number], number)
             button.disabled = False
             spinning = False
 
@@ -418,5 +432,5 @@ try:
 except Exception:
     pass
 button.disabled = False
-result.innerText = "Hold the wheel to charge, release to spin!"
+say("Hold the wheel to charge, release to spin!")
 set_theme(saved if saved in THEMES else "digestive", save=False)
