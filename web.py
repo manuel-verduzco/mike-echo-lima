@@ -74,6 +74,7 @@ CHIPS = [(0.30, 0.30, 7), (0.45, 0.72, 6), (0.52, 0.22, 5), (0.90, 0.35, 6), (0.
 # Where the texture goes so it stays clear of the labels (set in build_body).
 hole_rings = ((0.28, 12), (0.73, 40))
 chip_bands = ((0.12, 0.46), (0.67, 0.79))
+sc = 1.0  # decoration scale: shrinks the per-slice decorations when slices get narrow
 
 
 def dot(x, y, size, color):
@@ -109,19 +110,19 @@ def deco_digestive(cx, cy, inner, a0):
         dot(x, y, 1.5, "#a6702f")
     for rf, af in HOLES:
         x, y = polar(cx, cy, inner * rf, a0 + af * extent)
-        dot(x, y, 3.6, "#bd8a45")
-        dot(x, y, 2.2, "#8f5c24")
+        dot(x, y, 3.6 * sc, "#bd8a45")
+        dot(x, y, 2.2 * sc, "#8f5c24")
 
 
 def deco_choc(cx, cy, inner, a0):
     ctx.lineCap = "round"
     ctx.strokeStyle = "rgba(255,255,255,0.16)"
-    ctx.lineWidth = 7
+    ctx.lineWidth = 7 * sc
     ctx.beginPath()
     ctx.arc(cx, cy, inner * 0.86, a0 + 0.18 * extent, a0 + 0.5 * extent)
     ctx.stroke()
     ctx.strokeStyle = "rgba(0,0,0,0.22)"
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2 * sc
     for rf in (0.45, 0.62):
         ctx.beginPath()
         ctx.arc(cx, cy, inner * rf, a0 + 0.12 * extent, a0 + 0.88 * extent)
@@ -133,7 +134,7 @@ def deco_cookie(cx, cy, inner, a0):
     for j, (rf, af, size) in enumerate(CHIPS):
         ca = a0 + af * extent
         x, y = polar(cx, cy, inner * rf, ca)
-        chip(x, y, size, ca + j)
+        chip(x, y, size * sc, ca + j)
     for rf, af in FLECKS[:6]:
         x, y = polar(cx, cy, inner * rf, a0 + af * extent)
         dot(x, y, 1.6, "#b97f35")
@@ -212,16 +213,11 @@ theme_name = "digestive"
 def build_body():
     """Draw the biscuit (at rotation 0) into the hidden canvas. Call after the
     biscuit or the order of the numbers changes."""
-    global ctx, hole_rings, chip_bands
+    global ctx, sc
     th = THEMES[theme_name]
     dense = count >= DENSE
     radial = dense or max(len(label(g)) for g in groups) > 3  # long labels run along the slice
-    if not dense:
-        hole_rings = ((0.2, 10), (0.90, 44))
-        chip_bands = ((0.10, 0.36), (0.88, 0.95))
-    else:
-        hole_rings = ((0.28, 12), (0.73, 40))
-        chip_bands = ((0.12, 0.46), (0.67, 0.79))
+    sc = max(0.85, min(1.0, extent / 0.5236))  # narrower slices get smaller decorations
     main_ctx = ctx
     ctx = bctx
     try:
@@ -252,9 +248,9 @@ def build_body():
             ctx.strokeStyle = th["line"]
             ctx.lineWidth = 0.8 if dense else 2
             ctx.stroke()
-            if not radial:
+            if not dense:
                 th["deco"](cx, cy, inner, a0)
-        if radial:
+        if dense:
             th["dense"](cx, cy, inner)
         if th["after"]:
             th["after"](cx, cy, inner)
