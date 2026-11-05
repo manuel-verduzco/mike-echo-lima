@@ -172,7 +172,7 @@ THEMES = {
         "text_r": 0.68, "texture": texture_cookie, "glare": False,
     },
 }
-theme_name = "digestive"
+theme_name = "cookie"
 
 
 def build_body():
@@ -433,4 +433,4 @@ except Exception:
     pass
 button.disabled = False
 say("Hold the wheel to charge, release to spin!")
-set_theme(saved if saved in THEMES else "digestive", save=False)
+set_theme(saved if saved in THEMES else "cookie", save=False)
