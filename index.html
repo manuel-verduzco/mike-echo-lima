@@ -27,6 +27,18 @@
     #fill { height: 100%; width: 0; background: hsl(130,80%,50%); }
     button { user-select: none; -webkit-user-select: none; touch-action: none; font-size: 1.1rem; font-weight: bold; padding: 14px 48px; border-radius: 8px; border: 0; background: #1b9ac4; color: #fff; cursor: pointer; }
     button:disabled { opacity: .5; cursor: default; }
+    /* Phones: everything must fit on one screen without scrolling. The wheel shrinks to
+       whatever height is left after the title, sentence, bar, button and footer. */
+    @media (max-width: 759px) {
+      body { padding: 4px 12px 6px; }
+      h1 { font-size: 1.5rem; margin: 4px 0; }
+      .wheel-wrap { width: min(460px, 100%, calc((100vh - 270px) * 0.92)); width: min(460px, 100%, calc((100dvh - 270px) * 0.92)); }
+      #swap { width: 40px; height: 40px; font-size: 1.15rem; }
+      #result { font-size: 1rem; min-height: 4.4rem; margin: 2px auto 4px; padding: 0 4px; }
+      #power { margin: 2px auto 8px; height: 14px; }
+      #spin { padding: 12px 40px; }
+      p { margin: 8px 0 0; }
+    }
   </style>
 </head>
 <body>
@@ -45,6 +57,6 @@
   <p><small>Written in Python, running in your browser via
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
-  <script type="mpy" src="./web.py?v=15" config="./pyscript.toml?v=15"></script>
+  <script type="mpy" src="./web.py?v=16" config="./pyscript.toml?v=16"></script>
 </body>
 </html>
