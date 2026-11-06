@@ -55,8 +55,9 @@ branch `main`, root folder). Repository: `manuel-verduzco/mike-echo-lima`.
 
 - The move to Supabase is **live** (published 16:05 UTC on 2026-11-06). The game and the stats page both read and
   write Supabase; the old counter service (Abacus) is no longer used by the code.
-- The "📊 Stats" link on the wheel page is **visible** again (it was hidden for a few hours during the move; to hide it,
-  put the `hidden` attribute back on `#statslink` in `index.html`).
+- The "📊 Stats" link on the wheel page is **meant to be visible** (the code says so since commit `661a7ac`; to hide it,
+  put the `hidden` attribute back on `#statslink` in `index.html`). GitHub Pages timed out twice in a row publishing it
+  (`661a7ac`, `74ab0dc`), so on the live site it may still be hidden. Check the live page's HTML before assuming.
 - Still to do: a one-off catch-up. Visitors who still had the old page open may have added spins to the old Abacus
   counters (namespace `manuel-verduzco-mike-echo-lima`) after the starting numbers were loaded into Supabase
   (total 1,010 at 15:50 UTC). Read the old counters once and, if the old total is above 1,010, add the difference to the
