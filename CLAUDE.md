@@ -45,8 +45,10 @@ branch `main`, root folder). Repository: `manuel-verduzco/mike-echo-lima`.
 - **Ask before pushing** to GitHub, unless they have just told you to push.
 - Check deploys and background jobs **once** with short timeouts and report. Never wait in long polling or sleep loops;
   tell them what is pending and the manual step instead.
-- GitHub Pages publishes can get stuck or time out. The fix is the run page's **Cancel workflow** then **Re-run all
-  jobs**, or push a new commit.
+- GitHub Pages publishes can get stuck or time out (a publish sitting in `updating_pages` for 10 minutes fails with
+  "Timeout reached"). First try the run page's **Cancel workflow**, then **Re-run all jobs**. If that re-run fails within
+  seconds with "Deployment cancelled", the cancelled attempt was still being cleaned up (a re-run reuses the same publish
+  ID): do not keep re-running, push a new commit instead, which gets a fresh publish ID and normally goes through.
 - Do not publish or change anything outside this project without asking.
 
 ## Current state (update this when it changes; last updated 2026-11-06)
