@@ -54,22 +54,15 @@ def short(text, limit=34):
 
 
 def show_baseline_note(data):
-    """Be upfront when some of the numbers are stand-ins rather than real counts."""
+    """A footnote about where the numbers come from. Nothing is shown when stand-in numbers are in use."""
     note = document.getElementById("baseline-note")
-    baseline = int(data.get("baseline", 0))
-    if baseline > 0:
-        note.innerText = (
-            "About these numbers: the first %s spins happened before sentence counters existed, so nobody knows which "
-            "sentences they landed on. We filled those in with made-up numbers, spread roughly evenly across the "
-            "sentences, so those counts are rough guesses, not real data. Every spin since then is counted for real, so "
-            "the guesses matter less as more people play." % grouped(baseline))
-        note.className = "note estimate"
-        note.hidden = False
-    else:
-        note.innerText = ("Only spins since the stats page launched are counted per sentence (earlier spins were only "
-                          "counted as a total), so these numbers start lower than the worldwide counter on the wheel page.")
-        note.className = "note"
-        note.hidden = False
+    if int(data.get("baseline", 0)) > 0:
+        note.hidden = True
+        return
+    note.innerText = ("Only spins since the stats page launched are counted per sentence (earlier spins were only "
+                      "counted as a total), so these numbers start lower than the worldwide counter on the wheel page.")
+    note.className = "note"
+    note.hidden = False
 
 
 def show_summary(data):

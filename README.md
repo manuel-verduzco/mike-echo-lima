@@ -106,9 +106,10 @@ for the spins made *before* the sentence counters existed. It shares them out ac
 sentence you pin to a chosen number. It saves them in `stats_baseline.json`, and `update_stats.py` adds them on
 top of the real counters.
 
-**These numbers are made up, and the stats page says so** in a highlighted note whenever a baseline is in use
-("...we filled those in with made-up numbers... rough guesses, not real data"). Please keep that note: people
-reading the page should know which numbers are real.
+**These numbers are made up.** The stats page no longer carries a note saying so (that was a choice made
+after launch), but the "Spins counted" card still reads "N of them estimated" while a baseline is in use, and this
+README and `stats_baseline.json` (its `note` field) record it. If the page's note is ever wanted again, it lives
+in `show_baseline_note` in [`stats.py`](stats.py).
 
 ```bash
 python make_baseline.py --pin 1=12   # run ONCE, just before the stats go live (it reads the worldwide total right then)
