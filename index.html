@@ -42,7 +42,10 @@
     @keyframes ms-pop { 0% { opacity: 0; transform: scale(.6) rotate(-4deg); } 100% { opacity: 1; transform: none; } }
     @keyframes ms-bob { 50% { transform: translateY(-6px) rotate(6deg); } }
     @media (prefers-reduced-motion: reduce) { .ms-card, .ms-crown { animation: none; } }
-    #counter { visibility: hidden; margin-top: 14px; min-height: 1.3em; font-size: .85rem; color: #9a9ab0; }
+    .meta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 16px; margin-top: 14px; min-height: 1.3em; font-size: .85rem; color: #9a9ab0; }
+    #counter { visibility: hidden; }
+    #statslink { color: #e6b068; text-decoration: none; font-weight: 600; padding: 2px 4px; }
+    #statslink:hover, #statslink:focus-visible { text-decoration: underline; }
     small { font-size: .75rem; color: #6a6a7e; }
     small a { color: #8b95ad; }
     body { font-family: system-ui, sans-serif; text-align: center; background: #14141c; color: #f1f1f6; margin: 0; padding: 8px 12px 24px; }
@@ -89,7 +92,7 @@
       #result.won #msg { font-size: 1.15rem; }
       #power { margin: 4px auto 12px; height: 12px; }
       #spin { padding: 12px 40px; }
-      #counter { margin-top: 10px; }
+      .meta { margin-top: 10px; }
       p { margin: 4px 0 0; }
       small { font-size: .66rem; }
     }
@@ -112,7 +115,10 @@
       </div>
     </div>
   </div>
-  <div id="counter" aria-live="polite">🍪 0 spins worldwide</div>
+  <div class="meta">
+    <span id="counter" aria-live="polite">🍪 0 spins worldwide</span>
+    <a id="statslink" href="stats.html">📊 Stats</a>
+  </div>
   <p><small>Written in Python, running in your browser via
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
@@ -129,6 +135,6 @@
   </div>
   <canvas id="fx" aria-hidden="true"></canvas>
   <div id="banner" aria-hidden="true"></div>
-  <script type="mpy" src="./web.py?v=37" config="./pyscript.toml?v=37"></script>
+  <script type="mpy" src="./web.py?v=47" config="./pyscript.toml?v=47"></script>
 </body>
 </html>

@@ -7,6 +7,7 @@ import json
 import math
 import random
 
+from counters import COUNTER_BASE, LIVE_HOST, TOTAL_KEY, namespace_for, sentence_key
 from effects import (JACKPOT_NUMBER, MILESTONE_MESSAGE, MILESTONE_NUMBER_TEXT, MILESTONE_TITLE,
                      choose_effects, is_milestone, register_tap)
 from phrases import PHRASES, deal, group_index, label, random_number
@@ -31,7 +32,7 @@ hint = document.getElementById("hint")
 num_el = document.getElementById("num")
 counter_el = document.getElementById("counter")
 
-IS_LIVE = window.location.hostname == "manuel-verduzco.github.io"
+IS_LIVE = window.location.hostname == LIVE_HOST
 # For testing only, and ignored on the live site: add ?force=1 to the address to make the
 # wheel land on that number, and/or &fx=crumbs (or rain) to force an effect, and/or
 # &milestone=1 to see the "spin number 1,000" message after the next spin.
@@ -54,11 +55,8 @@ if not IS_LIVE:
 # counter name is sent, nothing about the player. If the service is unreachable the
 # game still works and the counter just stays hidden. Spins made while testing on
 # localhost go to a separate "-dev" counter so they do not inflate the real total.
-COUNTER_BASE = "https://abacus.jasoncameron.dev"
-COUNTER_NS = "manuel-verduzco-mike-echo-lima"
-if not IS_LIVE:
-    COUNTER_NS += "-dev"
-COUNTER_KEY = "spins"
+COUNTER_NS = namespace_for(window.location.hostname)  # the real counters on the real site, "-dev" ones elsewhere
+COUNTER_KEY = TOTAL_KEY
 
 
 def show_count(value):
@@ -70,6 +68,15 @@ def show_count(value):
     total = digits + out
     counter_el.innerText = "🍪 %s spin%s worldwide" % (total, "" if total == "1" else "s")
     counter_el.style.visibility = "visible"
+
+
+def count_sentence(number):
+    """Add 1 to this sentence's own counter. The stats page shows these (see update_stats.py)."""
+    url = "%s/hit/%s/%s" % (COUNTER_BASE, COUNTER_NS, sentence_key(number))
+    try:
+        window.fetch(url).catch(create_proxy(lambda e: None))
+    except Exception:
+        pass
 
 
 def counter_request(action, retry=True):
@@ -181,8 +188,8 @@ def toggle_mute(event=None):
 
 
 def load_sounds():
-    # the number changes every 10 minutes, so edits to sounds.json show up soon after publishing
-    url = "sounds.json?t=%d" % int(window.Date.now() / 600000)
+    # the stamp changes every 10 minutes, so edits to sounds.json show up soon after publishing
+    url = "sounds.json?t=%s" % str(window.Date.new().toISOString())[:15]  # changes every 10 minutes
 
     def on_response(resp):
         if resp.ok:
@@ -766,7 +773,7 @@ def title_tap(event):
     global secret_armed, secret_taps
     if spinning or charging:
         return
-    secret_taps, triggered = register_tap(secret_taps, window.Date.now())
+    secret_taps, triggered = register_tap(secret_taps, window.performance.now())
     if not triggered:
         return
     secret_armed = not secret_armed  # five more taps switch it off again
@@ -820,6 +827,7 @@ def spin(force):
         say(PHRASES[number], number)
         if not secret:
             counter_request("hit")  # count this finished spin (forced ones do not count)
+            count_sentence(number)  # and count which sentence it was, for the stats page
         if FORCE_MILESTONE:
             celebrate_milestone()  # testing only, never on the live site
         play_sound(number)  # its own voice note / sound, if you added one

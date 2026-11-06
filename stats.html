@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bic Bic stats</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
+  <link rel="shortcut icon" href="favicon.ico?v=2">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+  <meta name="theme-color" content="#14141c">
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+  <style>
+    a { color: #7cc4ff; }
+    body { font-family: system-ui, sans-serif; background: #14141c; color: #f1f1f6; margin: 0; padding: 0 14px 40px; }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    /* The bar with the back button stays at the top of the screen while the list scrolls under it. */
+    .topbar { position: sticky; top: 0; z-index: 10; margin: 0 -14px 8px; padding: 10px 14px; background: rgba(20, 20, 28, .94); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid #2a2a3c; }
+    .topbar-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .topbar h1 { margin: 0; min-width: 0; font-size: clamp(1.1rem, 5.2vw, 1.55rem); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wrap { padding-top: 6px; }
+    .back { flex: none; display: inline-block; white-space: nowrap; padding: 8px 16px; font-size: .95rem; font-weight: 600; text-decoration: none; color: #f1f1f6; background: #2a2a38; border: 1px solid #44445a; border-radius: 999px; }
+    .back:hover, .back:focus-visible { background: #34344a; border-color: #e6b068; }
+    #updated { margin: 0 0 14px; color: #9a9ab0; font-size: .9rem; }
+    #summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .card { background: #1d1d2a; border: 1px solid #34344a; border-radius: 14px; padding: 12px 12px 10px; min-width: 0; }
+    .card .label { font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: #9a9ab0; }
+    .card .value { margin-top: 4px; font-size: 1.5rem; font-weight: 800; color: #ffd45a; line-height: 1.15; }
+    .card .sub { margin-top: 3px; font-size: .8rem; color: #b4b4c8; overflow-wrap: anywhere; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+    #search { flex: 1 1 200px; min-width: 0; box-sizing: border-box; padding: 11px 14px; font-size: 1rem; color: #f1f1f6; background: #1d1d2a; border: 1px solid #44445a; border-radius: 10px; }
+    #search::placeholder { color: #7d7d92; }
+    .seg { display: flex; border: 1px solid #44445a; border-radius: 10px; overflow: hidden; }
+    .seg button { font: inherit; font-size: .9rem; font-weight: 600; padding: 10px 14px; border: 0; background: #1d1d2a; color: #b4b4c8; cursor: pointer; }
+    .seg button.on { background: #e6b068; color: #3a1d0e; }
+    #list { list-style: none; margin: 0; padding: 0; }
+    .row { --w: 0%; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; margin-bottom: 6px; border-radius: 10px; border: 1px solid #2a2a3c; background: linear-gradient(90deg, rgba(230, 176, 104, .28) var(--w), #1a1a26 var(--w)); }
+    .row .num { min-width: 2.6em; text-align: center; font-weight: 800; font-size: .85rem; padding: 2px 9px; border-radius: 999px; background: #e6b068; color: #3a1d0e; }
+    .row .txt { overflow-wrap: anywhere; line-height: 1.3; }
+    .row .cnt { font-weight: 800; font-size: 1.1rem; color: #fff; font-variant-numeric: tabular-nums; }
+    .row.zero { opacity: .55; }
+    .row.zero .num { background: #44445a; color: #d8d8e6; }
+    #empty { color: #9a9ab0; padding: 18px 4px; }
+    .note { margin-top: 18px; font-size: .8rem; line-height: 1.5; color: #7d7d92; }
+    .note.estimate { color: #e6b068; background: rgba(230, 176, 104, .08); border: 1px solid rgba(230, 176, 104, .35); border-radius: 10px; padding: 10px 12px; }
+    @media (max-width: 360px) { .back { padding: 7px 12px; font-size: .85rem; } }
+    @media (max-width: 520px) {
+      #summary { grid-template-columns: 1fr; gap: 8px; }
+      .card { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; padding: 10px 12px; }
+      .card .label { grid-column: 1; }
+      .card .value { grid-column: 2; grid-row: 1 / span 2; margin: 0; font-size: 1.3rem; text-align: right; }
+      .card .sub { grid-column: 1; margin-top: 2px; }
+      .seg { flex: 1 1 100%; }
+      .seg button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar"><div class="topbar-inner"><h1>🍪 Bic Bic stats</h1><a class="back" href="index.html">← Back to the wheel</a></div></div>
+  <div class="wrap">
+    <p id="updated">Loading the bic bics...</p>
+    <div id="summary" hidden>
+      <div class="card"><div class="label">Spins counted</div><div class="value" id="s-counted">0</div><div class="sub" id="s-counted-sub"></div></div>
+      <div class="card"><div class="label">Most landed</div><div class="value" id="s-top">-</div><div class="sub" id="s-top-sub"></div></div>
+    </div>
+    <div class="controls">
+      <input id="search" type="search" placeholder="Search sentences or numbers" autocomplete="off" aria-label="Search sentences or numbers">
+      <div class="seg" role="group" aria-label="Sort order">
+        <button id="sort-count" class="on">Most landed</button>
+        <button id="sort-number">By number</button>
+      </div>
+    </div>
+    <ol id="list"></ol>
+    <p id="empty" hidden>Nothing matches that search.</p>
+    <p class="note" id="baseline-note" hidden></p>
+    <p class="note">How it works: every time a sentence lands, its own counter goes up by one. A saved snapshot of all the
+      counters is refreshed about every 5 minutes, so this page can trail the live game a little. The counters are
+      public, so treat them as fun rather than exact.</p>
+  </div>
+  <script type="mpy" src="./stats.py?v=47" config="./pyscript.toml?v=47"></script>
+</body>
+</html>

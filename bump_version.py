@@ -1,7 +1,7 @@
 """Bump the cache-busting number (?v=NN) on the game's files.
 
-Why: browsers keep website files for about 10 minutes. The page asks for web.py, phrases.py,
-effects.py, phrases.json and pyscript.toml with a "?v=NN" on the end, and changing that number
+Why: browsers keep website files for about 10 minutes. The pages ask for web.py, stats.py, phrases.py,
+effects.py, counters.py, phrases.json and pyscript.toml with a "?v=NN" on the end, and changing that number
 makes everyone fetch the fresh copy straight away. If you change any of those files and forget
 to bump it, people can end up with a mix of old and new files and the game shows an error.
 
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-FILES = ("index.html", "pyscript.toml")
+FILES = ("index.html", "stats.html", "pyscript.toml")
 # any .py / .json / .toml file followed by ?v=<number>
 PATTERN = re.compile(r"(\.(?:py|json|toml)\?v=)(\d+)")
 
@@ -25,7 +25,7 @@ PATTERN = re.compile(r"(\.(?:py|json|toml)\?v=)(\d+)")
 def current_version(texts):
     versions = [int(m.group(2)) for text in texts for m in PATTERN.finditer(text)]
     if not versions:
-        sys.exit("Could not find any ?v=NN numbers in index.html / pyscript.toml.")
+        sys.exit("Could not find any ?v=NN numbers in index.html / stats.html / pyscript.toml.")
     return max(versions)
 
 
@@ -35,7 +35,7 @@ def main():
     new = old + 1
     for name, text in texts.items():
         (HERE / name).write_text(PATTERN.sub(lambda m: m.group(1) + str(new), text), encoding="utf-8")
-    print("Cache version bumped: v%d -> v%d (index.html and pyscript.toml)" % (old, new))
+    print("Cache version bumped: v%d -> v%d (index.html, stats.html and pyscript.toml)" % (old, new))
 
 
 if __name__ == "__main__":
