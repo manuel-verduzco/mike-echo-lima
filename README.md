@@ -217,6 +217,7 @@ Then open **http://localhost:8765/index.html**. Stop the server with `Ctrl+C` wh
 - `spin_wheel.py`: the desktop version (tkinter).
 - `bump_version.py`: the cache version helper described above.
 - `test_wheel.py`: the automatic checks.
+- `CLAUDE.md`: notes that Claude reads automatically when it opens this folder (rules, commands, current state).
 
 ### If something goes wrong
 
