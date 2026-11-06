@@ -1,7 +1,7 @@
 """The stats page (runs as Python via PyScript, like the game).
 
 It loads stats.json - a snapshot of every sentence's counter, saved into the repository (on its own
-"stats-data" branch) about every 5 minutes by update_stats.py - and lists all the sentences with how
+"stats-data" branch) about every 10 minutes by update_stats.py - and lists all the sentences with how
 often each has landed.
 """
 
@@ -147,7 +147,7 @@ def load_stats(data):
         except Exception:
             pass
     else:
-        updated_el.innerText = "No snapshot saved yet. The first one appears within about 5 minutes of the next spins."
+        updated_el.innerText = "No snapshot saved yet. The first one appears within about 10 minutes of the next spins."
     show_summary(data)
     show_baseline_note(data)
     render()

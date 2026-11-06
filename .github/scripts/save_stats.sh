@@ -2,7 +2,7 @@
 # Saves a fresh stats.json onto the "stats-data" branch (creating the branch the first time).
 #
 # Why a separate branch: a commit on main makes GitHub rebuild the website, and Pages only allows
-# about 10 rebuilds an hour. Snapshots every 5 minutes would hit that, and they would bury your real
+# about 10 rebuilds an hour. Frequent snapshots would use that allowance up, and they would bury your real
 # changes in "Update stats" commits. On its own branch they cost nothing and the history of the
 # numbers stays tidy. The stats page reads the file straight from that branch.
 #
@@ -32,7 +32,7 @@ else
 
 This branch only holds `stats.json`, a snapshot of how many times each sentence has landed.
 It is rewritten automatically by the "Update stats" workflow on the main branch (about every
-5 minutes, and only when something changed). The stats page reads the file from here.
+10 minutes, and only when something changed). The stats page reads the file from here.
 Please do not edit it by hand.
 TXT
 fi

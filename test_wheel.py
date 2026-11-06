@@ -194,9 +194,12 @@ class StatsLocationTests(unittest.TestCase):
             text = f.read()
         cron = re.search(r'cron:\s*"([^"]+)"', text).group(1)
         minutes = cron.split()[0]
-        step = int(minutes.split("/")[1]) if "/" in minutes else None
-        self.assertIsNotNone(step, "the schedule should repeat every N minutes")
-        self.assertGreaterEqual(step, 5, "GitHub does not run scheduled workflows more often than every 5 minutes")
+        if "/" in minutes:
+            gap = int(minutes.split("/")[1])  # a step such as */10
+        else:
+            slots = sorted(int(m) for m in minutes.split(","))  # an explicit list such as 5,15,25
+            gap = min((b - a) % 60 or 60 for a, b in zip(slots, slots[1:] + slots[:1]))
+        self.assertGreaterEqual(gap, 5, "GitHub does not run scheduled workflows more often than every 5 minutes")
 
     def test_the_workflow_uses_the_saving_script_that_exists(self):
         here = os.path.dirname(os.path.abspath(__file__))

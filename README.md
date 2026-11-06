@@ -67,15 +67,15 @@ How it works:
 1. When a sentence lands, the game adds 1 to that sentence's own counter on the same counter service
    (names like `sentence-37`). Spins forced with the test shortcuts are not counted.
 2. A browser cannot write into this repository (that would need a secret password in the public code),
-   so a **scheduled GitHub Action** does it instead. About every 5 minutes (the shortest gap GitHub
-   allows) it runs [`update_stats.py`](update_stats.py), which reads all the counters and saves them into
+   so a **scheduled GitHub Action** does it instead. About every 10 minutes (GitHub's scheduler is best-effort, so a run can start
+   a little late) it runs [`update_stats.py`](update_stats.py), which reads all the counters and saves them into
    `stats.json`. It only saves when something changed.
 3. That file is saved on its **own branch, `stats-data`**, not on `main`. A save on `main` would make
    GitHub rebuild the website each time (Pages only allows about 10 rebuilds an hour) and would bury your
    real changes in "Update stats" commits. On its own branch it costs nothing, and the branch's history is
    a neat record of how the numbers grew. You can browse it on GitHub with the branch menu.
 4. The stats page reads the file straight from that branch, so it opens instantly and is usually less than
-   about 10 minutes behind the live game (up to 5 minutes for the next save, plus GitHub's own 5 minute
+   about 15 minutes behind the live game (up to 10 minutes for the next save, plus GitHub's own 5 minute
    cache).
 5. The spins from before the per-sentence counters existed were only counted as a total, so nobody knows which
    sentences they landed on. See "Stand-in numbers for the earlier spins" below.

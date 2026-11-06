@@ -1,7 +1,7 @@
 """Save a snapshot of every sentence's counter into stats.json (the stats page reads that file).
 
 Visitors' browsers add 1 to a sentence's counter each time it lands. A scheduled GitHub Action
-(.github/workflows/update-stats.yml) runs this script about every 5 minutes: it reads all the counters
+(.github/workflows/update-stats.yml) runs this script about every 10 minutes: it reads all the counters
 and writes them into stats.json, which is committed to the "stats-data" branch of the repository
 (see .github/scripts/save_stats.sh). The stats page then loads that one small file instead of making
 106 requests of its own.
