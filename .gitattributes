@@ -1,4 +1,0 @@
-# The saving script runs on Linux in GitHub Actions, so it must always keep Unix line endings,
-# even when it is edited on Windows.
-*.sh text eol=lf
-.github/** text eol=lf

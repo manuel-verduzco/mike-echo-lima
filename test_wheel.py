@@ -2,17 +2,13 @@ import json
 import os
 import random
 import re
-import tempfile
 import unittest
 
 from effects import (EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, MILESTONE_MESSAGE, MILESTONE_SPIN, MILESTONE_TITLE,
                      SECRET_GAP_MS, SECRET_TAPS, choose_effects, is_milestone, register_tap)
-from counters import LIVE_NAMESPACE, LIVE_STATS_URL, LOCAL_STATS_URL, TOTAL_KEY, namespace_for, sentence_key, stats_urls
+from counters import DB_KEY, DB_URL, LIVE_HOST, counts_url, db_namespace, record_spin_url, total_url
 from phrases import GROUPS, PHRASES, deal, group_index, label, random_number
 from spin_wheel import number_at_pointer, pick_number, target_angle
-from timeutil import ago_text, iso_to_seconds
-from make_baseline import build, describe, make_counts
-from update_stats import collect, load_baseline, same_numbers, update
 
 
 class WheelTests(unittest.TestCase):
@@ -147,200 +143,63 @@ class WebsiteFilesTests(unittest.TestCase):
         self.assertIn('"./phrases.json?v=', self.toml)
 
 
-class CounterNameTests(unittest.TestCase):
-    def test_real_site_and_testing_use_different_counters(self):
-        self.assertEqual(namespace_for("manuel-verduzco.github.io"), LIVE_NAMESPACE)
+class DatabaseConfigTests(unittest.TestCase):
+    """The counters live in Supabase. These checks keep the setup safe and in step with the sentences."""
+
+    def project_files(self):
+        here = os.path.dirname(os.path.abspath(__file__))
+        for folder, dirs, files in os.walk(here):
+            dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "sounds")]
+            for name in files:
+                if name.endswith((".py", ".html", ".json", ".sql", ".toml", ".yml", ".sh", ".js")) and name != "test_wheel.py":
+                    path = os.path.join(folder, name)
+                    with open(path, encoding="utf-8") as f:
+                        yield name, f.read()
+
+    def test_the_real_site_and_testing_count_into_separate_rows(self):
+        self.assertEqual(db_namespace(LIVE_HOST), "live")
         for host in ("localhost", "127.0.0.1", "192.168.1.20"):
-            self.assertEqual(namespace_for(host), LIVE_NAMESPACE + "-dev")
+            self.assertEqual(db_namespace(host), "dev")
 
-    def test_every_sentence_has_a_valid_counter_name(self):
-        names = {sentence_key(n) for n in PHRASES}
-        self.assertEqual(len(names), len(PHRASES))  # all different
-        for name in names:
-            self.assertTrue(3 <= len(name) <= 64)  # the service rejects shorter or longer names
-            self.assertRegex(name, r"^[A-Za-z0-9_.-]+$")
+    def test_the_key_in_the_code_is_the_public_one(self):
+        self.assertTrue(DB_KEY.startswith("sb_publishable_"))
+        self.assertTrue(DB_URL.startswith("https://") and DB_URL.endswith(".supabase.co"))
 
+    def test_no_secret_database_key_is_anywhere_in_the_project(self):
+        # looks for the SHAPE of a real secret key (not the words, which the docs may mention as a warning)
+        secret_key = re.compile(r"sb_secret_[A-Za-z0-9_\-]{16,}")
+        jwt = re.compile(r"eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}")  # old-style keys, incl. service_role
+        for name, text in self.project_files():
+            self.assertIsNone(secret_key.search(text), name + " contains what looks like a Supabase secret key")
+            self.assertIsNone(jwt.search(text), name + " contains what looks like a JWT / legacy API key")
 
-class TimeHelperTests(unittest.TestCase):
-    def test_iso_text_turns_into_the_right_number_of_seconds(self):
-        from datetime import datetime, timezone
-        for iso in ("1970-01-01T00:00:00Z", "2000-02-29T23:59:59Z", "2026-11-06T11:40:12Z", "2026-03-01T00:00:00Z",
-                    "2026-01-31T12:00:00.123Z", "2024-12-31T23:59:59Z", "2100-03-01T00:00:00Z"):
-            real = datetime.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
-            self.assertEqual(iso_to_seconds(iso), int(real), iso)
+    def test_the_guard_really_recognises_a_secret_key(self):
+        secret_key = re.compile(r"sb_secret_[A-Za-z0-9_\-]{16,}")
+        self.assertIsNotNone(secret_key.search("KEY = 'sb_secret_lRSVExampleExampleExample1234'"))
+        self.assertIsNone(secret_key.search("never put a key that starts sb_secret_ in the repository"))
 
-    def test_ago_text(self):
-        self.assertEqual(ago_text(0), "just now")
-        self.assertEqual(ago_text(59), "just now")
-        self.assertEqual(ago_text(60), "1 minute ago")
-        self.assertEqual(ago_text(5 * 60 + 30), "5 minutes ago")
-        self.assertEqual(ago_text(3600), "1 hour ago")
-        self.assertEqual(ago_text(7 * 3600), "7 hours ago")
-        self.assertEqual(ago_text(3 * 86400), "3 days ago")
+    def test_the_addresses_point_at_the_project(self):
+        self.assertEqual(record_spin_url(), DB_URL + "/rest/v1/rpc/record_spin")
+        self.assertIn("spin_totals", total_url("live"))
+        self.assertIn("namespace=eq.live", total_url("live"))
+        self.assertIn("sentence_counts", counts_url("dev"))
+        self.assertIn("namespace=eq.dev", counts_url("dev"))
 
+    def test_the_database_has_a_row_for_every_sentence(self):
+        # supabase_setup.sql creates rows 1..106. If you add sentences, add rows too (see that file).
+        self.assertLessEqual(max(PHRASES), 106, "more sentences than database rows: extend supabase_setup.sql")
 
-class StatsLocationTests(unittest.TestCase):
-    def test_the_real_site_reads_the_stats_branch_then_falls_back_to_the_shipped_file(self):
-        self.assertEqual(stats_urls(True), [LIVE_STATS_URL, LOCAL_STATS_URL])
-        self.assertEqual(stats_urls(False), [LOCAL_STATS_URL])
-
-    def test_the_live_address_points_at_the_stats_data_branch(self):
-        self.assertIn("/stats-data/stats.json", LIVE_STATS_URL)
-        self.assertTrue(LIVE_STATS_URL.startswith("https://raw.githubusercontent.com/"))
-
-    def test_the_schedule_is_no_faster_than_github_allows(self):
+    def test_the_sql_locks_the_tables_down(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(here, ".github", "workflows", "update-stats.yml"), encoding="utf-8") as f:
-            text = f.read()
-        cron = re.search(r'cron:\s*"([^"]+)"', text).group(1)
-        minutes = cron.split()[0]
-        if "/" in minutes:
-            gap = int(minutes.split("/")[1])  # a step such as */10
-        else:
-            slots = sorted(int(m) for m in minutes.split(","))  # an explicit list such as 5,15,25
-            gap = min((b - a) % 60 or 60 for a, b in zip(slots, slots[1:] + slots[:1]))
-        self.assertGreaterEqual(gap, 5, "GitHub does not run scheduled workflows more often than every 5 minutes")
-
-    def test_the_workflow_uses_the_saving_script_that_exists(self):
-        here = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(here, ".github", "workflows", "update-stats.yml"), encoding="utf-8") as f:
-            self.assertIn(".github/scripts/save_stats.sh", f.read())
-        self.assertTrue(os.path.isfile(os.path.join(here, ".github", "scripts", "save_stats.sh")))
-
-
-class StatsSnapshotTests(unittest.TestCase):
-    def fake_service(self, values, fail_on=None):
-        """A pretend counter service: {(namespace, key): number}; missing keys read as 0."""
-        calls = []
-
-        def fetch(namespace, key):
-            calls.append((namespace, key))
-            if key == fail_on:
-                raise RuntimeError("the counter service is down")
-            return values.get((namespace, key), 0)
-
-        return fetch, calls
-
-    def test_collect_reads_the_total_and_every_sentence(self):
-        values = {("ns", TOTAL_KEY): 50, ("ns", sentence_key(1)): 3, ("ns", sentence_key(37)): 9}
-        fetch, calls = self.fake_service(values)
-        data = collect("ns", sorted(PHRASES), fetch=fetch, sleep=lambda s: None)
-        self.assertEqual(data["total"], 50)
-        self.assertEqual(data["counted"], 12)
-        self.assertEqual(sorted(data["counts"], key=int), [str(n) for n in sorted(PHRASES)])
-        self.assertEqual(data["counts"]["37"], 9)
-        self.assertEqual(data["counts"]["2"], 0)
-        self.assertEqual(len(calls), len(PHRASES) + 1)
-
-    def test_update_writes_then_leaves_an_unchanged_file_alone(self):
-        fetch, _ = self.fake_service({("ns", sentence_key(5)): 4, ("ns", TOTAL_KEY): 10})
-        with tempfile.TemporaryDirectory() as folder:
-            path = os.path.join(folder, "stats.json")
-            self.assertEqual(update(path, "ns", [1, 5], fetch=fetch, sleep=lambda s: None, now=lambda: "T1"), "updated")
-            first = open(path, encoding="utf-8").read()
-            self.assertEqual(json.loads(first)["updated"], "T1")
-            self.assertEqual(json.loads(first)["counts"], {"1": 0, "5": 4})
-            # same numbers again: nothing is rewritten, so no pointless commit
-            self.assertEqual(update(path, "ns", [1, 5], fetch=fetch, sleep=lambda s: None, now=lambda: "T2"), "unchanged")
-            self.assertEqual(open(path, encoding="utf-8").read(), first)
-
-    def test_new_spins_update_the_file(self):
-        values = {("ns", sentence_key(5)): 4, ("ns", TOTAL_KEY): 10}
-        fetch, _ = self.fake_service(values)
-        with tempfile.TemporaryDirectory() as folder:
-            path = os.path.join(folder, "stats.json")
-            update(path, "ns", [1, 5], fetch=fetch, sleep=lambda s: None, now=lambda: "T1")
-            values[("ns", sentence_key(5))] = 5
-            self.assertEqual(update(path, "ns", [1, 5], fetch=fetch, sleep=lambda s: None, now=lambda: "T2"), "updated")
-            with open(path, encoding="utf-8") as f:
-                self.assertEqual(json.load(f)["counts"]["5"], 5)
-
-    def test_a_failure_never_overwrites_good_numbers(self):
-        good, _ = self.fake_service({("ns", sentence_key(5)): 4})
-        broken, _ = self.fake_service({}, fail_on=sentence_key(5))
-        with tempfile.TemporaryDirectory() as folder:
-            path = os.path.join(folder, "stats.json")
-            update(path, "ns", [1, 5], fetch=good, sleep=lambda s: None, now=lambda: "T1")
-            before = open(path, encoding="utf-8").read()
-            with self.assertRaises(RuntimeError):
-                update(path, "ns", [1, 5], fetch=broken, sleep=lambda s: None, now=lambda: "T2")
-            self.assertEqual(open(path, encoding="utf-8").read(), before)
-
-    def test_same_numbers_ignores_the_updated_time(self):
-        a = {"updated": "T1", "total": 1, "counted": 1, "counts": {"1": 1}}
-        self.assertTrue(same_numbers(a, {"updated": "T2", "total": 1, "counted": 1, "counts": {"1": 1}}))
-        self.assertFalse(same_numbers(a, {"total": 2, "counted": 1, "counts": {"1": 1}}))
-
-
-class BaselineTests(unittest.TestCase):
-    def test_the_stand_in_spins_add_up_to_the_earlier_total(self):
-        counts = make_counts(793, sorted(PHRASES), seed=1)
-        self.assertEqual(sum(counts.values()), 793)
-        self.assertEqual(sorted(counts, key=int), [str(n) for n in sorted(PHRASES)])
-
-    def test_the_spread_is_repeatable_and_roughly_even(self):
-        a = make_counts(10_600, sorted(PHRASES), seed=7)
-        self.assertEqual(a, make_counts(10_600, sorted(PHRASES), seed=7))   # same seed, same numbers
-        self.assertNotEqual(a, make_counts(10_600, sorted(PHRASES), seed=8))
-        expected = 10_600 / len(PHRASES)  # 100 each
-        self.assertLess(max(a.values()), expected * 1.6)
-        self.assertGreater(min(a.values()), expected * 0.5)
-
-    def test_a_pinned_sentence_gets_exactly_its_number_and_the_total_still_adds_up(self):
-        counts = make_counts(793, sorted(PHRASES), seed=2026, pins={"1": 12})
-        self.assertEqual(counts["1"], 12)
-        self.assertEqual(sum(counts.values()), 793)
-        self.assertEqual(len(counts), len(PHRASES))
-        # the others share out the rest evenly, so nothing looks absurd next to the pinned one
-        others = [v for k, v in counts.items() if k != "1"]
-        self.assertGreaterEqual(min(others), 1)
-        self.assertLessEqual(max(others), 20)
-
-    def test_the_default_spread_looks_like_real_random_spins(self):
-        counts = make_counts(793, sorted(PHRASES), seed=2026, pins={"1": 12})
-        info = describe(counts, {"1": 12})
-        self.assertAlmostEqual(info["average"], 793 / 106, places=1)
-        self.assertGreater(info["spread_ratio"], 0.7)   # real random spins give about 1.0
-        self.assertLess(info["spread_ratio"], 1.4)
-        self.assertLessEqual(info["ranks"]["1"], 15)    # #1 at 12 sits in the upper part, not at the very top
-        self.assertGreater(info["ranks"]["1"], 3)
-
-    def test_bad_pins_are_refused(self):
-        with self.assertRaises(ValueError):
-            make_counts(10, [1, 2, 3], seed=1, pins={"1": 11})      # more than the total
-        with self.assertRaises(ValueError):
-            make_counts(10, [1, 2, 3], seed=1, pins={"99": 1})      # not a sentence
-
-    def test_the_file_says_plainly_that_it_is_not_real_data(self):
-        data = build(50, [1, 2, 3], seed=1, now=lambda: "T")
-        self.assertTrue(data["estimated"])
-        self.assertIn("NOT real", data["note"])
-        self.assertEqual(data["spins"], 50)
-        self.assertEqual(sum(data["counts"].values()), 50)
-
-    def test_the_snapshot_adds_the_baseline_to_the_real_counts(self):
-        values = {("ns", TOTAL_KEY): 100, ("ns", sentence_key(1)): 5, ("ns", sentence_key(2)): 0}
-        fetch = lambda ns, key: values.get((ns, key), 0)
-        data = collect("ns", [1, 2], fetch=fetch, sleep=lambda s: None, baseline=({"1": 40, "2": 55}, 95))
-        self.assertEqual(data["counts"], {"1": 45, "2": 55})
-        self.assertEqual(data["counted"], 100)
-        self.assertEqual(data["total"], 100)
-        self.assertEqual(data["baseline"], 95)
-
-    def test_no_baseline_file_means_no_extra_numbers(self):
-        self.assertEqual(load_baseline("this-file-does-not-exist.json"), ({}, 0))
-        data = collect("ns", [1], fetch=lambda ns, key: 3, sleep=lambda s: None, baseline=None)
-        self.assertEqual(data["baseline"], 0)
-
-
-class StatsFileTests(unittest.TestCase):
-    def test_the_saved_snapshot_covers_every_sentence(self):
-        here = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(here, "stats.json"), encoding="utf-8") as f:
-            data = json.load(f)
-        self.assertEqual(sorted(data["counts"], key=int), [str(n) for n in sorted(PHRASES)])
-        self.assertTrue(all(isinstance(v, int) and v >= 0 for v in data["counts"].values()))
-        self.assertEqual(data["counted"], sum(data["counts"].values()))
+        with open(os.path.join(here, "supabase_setup.sql"), encoding="utf-8") as f:
+            sql = f.read().lower()
+        self.assertEqual(sql.count("enable row level security"), 2)      # both tables
+        self.assertIn("revoke all on public.spin_totals, public.sentence_counts from anon, authenticated", sql)
+        self.assertIn("grant select on public.spin_totals, public.sentence_counts to anon", sql)
+        self.assertIn("security definer", sql)                            # the add-1 function runs with its own rights
+        self.assertIn("grant execute on function public.record_spin(text, integer) to anon", sql)
+        for forbidden in ("to anon, authenticated", "grant insert", "grant update", "grant delete", "grant all"):
+            self.assertNotIn(forbidden, sql, "the public key must never be allowed to write: " + forbidden)
 
 
 class SoundManifestTests(unittest.TestCase):

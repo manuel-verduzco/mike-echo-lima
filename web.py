@@ -7,7 +7,8 @@ import json
 import math
 import random
 
-from counters import COUNTER_BASE, LIVE_HOST, TOTAL_KEY, namespace_for, sentence_key
+from counters import LIVE_HOST, db_namespace, record_spin_url, total_url
+from database import db_call
 from effects import (JACKPOT_NUMBER, MILESTONE_MESSAGE, MILESTONE_NUMBER_TEXT, MILESTONE_TITLE,
                      choose_effects, is_milestone, register_tap)
 from phrases import PHRASES, deal, group_index, label, random_number
@@ -49,14 +50,14 @@ if not IS_LIVE:
         if len(pair) == 2 and pair[0] == "milestone" and pair[1] == "1":
             FORCE_MILESTONE = True
 
-# ---- Global spin counter -------------------------------------------------------
-# GitHub Pages cannot store anything, so the total lives on a free public counter
-# service (https://jasoncameron.dev/abacus/). Each finished spin adds 1. Only the
-# counter name is sent, nothing about the player. If the service is unreachable the
-# game still works and the counter just stays hidden. Spins made while testing on
-# localhost go to a separate "-dev" counter so they do not inflate the real total.
-COUNTER_NS = namespace_for(window.location.hostname)  # the real counters on the real site, "-dev" ones elsewhere
-COUNTER_KEY = TOTAL_KEY
+# ---- Spin counters --------------------------------------------------------------
+# All the counts live in one Supabase database (see supabase_setup.sql), the single source of truth:
+# the worldwide total and one count per sentence. When a spin finishes, the page calls record_spin(),
+# which adds 1 to the total and to that sentence in one step and hands back the new total. Only the
+# sentence number is sent, nothing about the player. The public key in counters.py can read the counts and
+# call that one function, nothing else. If the database cannot be reached the game still works and the
+# counter simply stays hidden. Spins made away from the real website count into a separate "dev" set.
+DB_NS = db_namespace(window.location.hostname)
 
 
 def show_count(value):
@@ -70,41 +71,28 @@ def show_count(value):
     counter_el.style.visibility = "visible"
 
 
-def count_sentence(number):
-    """Add 1 to this sentence's own counter. The stats page shows these (see update_stats.py)."""
-    url = "%s/hit/%s/%s" % (COUNTER_BASE, COUNTER_NS, sentence_key(number))
-    try:
-        window.fetch(url).catch(create_proxy(lambda e: None))
-    except Exception:
-        pass
+def read_total(retry=True):
+    """Show the worldwide total (without counting a spin)."""
+
+    def on_rows(rows):
+        show_count(rows[0]["total"] if rows else 0)
+
+    def on_fail():
+        if retry:  # the database hiccuped: try once more shortly, otherwise stay quiet
+            window.setTimeout(create_proxy(lambda: read_total(False)), 1500)
+
+    db_call(total_url(DB_NS), "GET", None, on_rows, on_fail)
 
 
-def counter_request(action, retry=True):
-    """action is "get" (just read the total) or "hit" (add one spin, then show the new total)."""
-    url = "%s/%s/%s/%s" % (COUNTER_BASE, action, COUNTER_NS, COUNTER_KEY)
-    status = [0]
+def record_spin(number):
+    """Count a finished spin: +1 on the worldwide total and on this sentence. Shows the new total."""
 
-    def on_response(resp):
-        status[0] = resp.status
-        if resp.ok:
-            return resp.json()
-        return None
+    def on_total(total):
+        show_count(total)
+        if is_milestone(int(total)):
+            celebrate_milestone()  # this very spin made the total reach the milestone
 
-    def on_data(data):
-        if data:
-            show_count(data.value)
-            if action == "hit" and is_milestone(int(data.value)):
-                celebrate_milestone()  # this very spin made the counter reach the milestone
-        elif action == "get" and status[0] == 404:
-            show_count(0)  # nobody has spun yet, so the counter does not exist yet
-        elif retry:
-            # the free service hiccuped: try once more shortly, otherwise stay quiet
-            window.setTimeout(create_proxy(lambda: counter_request("get", False)), 1500)
-
-    try:
-        window.fetch(url).then(create_proxy(on_response)).then(create_proxy(on_data)).catch(create_proxy(lambda e: None))
-    except Exception:
-        pass
+    db_call(record_spin_url(), "POST", {"p_namespace": DB_NS, "p_number": number}, on_total)
 
 
 msg_el = document.getElementById("msg")
@@ -826,8 +814,7 @@ def spin(force):
         draw()
         say(PHRASES[number], number)
         if not secret:
-            counter_request("hit")  # count this finished spin (forced ones do not count)
-            count_sentence(number)  # and count which sentence it was, for the stats page
+            record_spin(number)  # count this finished spin: the total and this sentence (forced ones do not count)
         if FORCE_MILESTONE:
             celebrate_milestone()  # testing only, never on the live site
         play_sound(number)  # its own voice note / sound, if you added one
@@ -877,4 +864,4 @@ load_sounds()
 button.disabled = False
 say("Hold the wheel to charge, release to spin!")
 set_theme(saved if saved in THEMES else "cookie", save=False)
-counter_request("get")
+read_total()

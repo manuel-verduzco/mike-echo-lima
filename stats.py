@@ -1,17 +1,15 @@
 """The stats page (runs as Python via PyScript, like the game).
 
-It loads stats.json - a snapshot of every sentence's counter, saved into the repository (on its own
-"stats-data" branch) about every 10 minutes by update_stats.py - and lists all the sentences with how
-often each has landed.
+It reads the live counts straight from the Supabase database (the single source of truth, see
+counters.py and supabase_setup.sql) and lists all the sentences with how often each has landed. While
+the page is open it refreshes itself every 30 seconds.
 """
 
-import json
-
-from counters import LIVE_HOST, stats_urls
+from counters import counts_url, db_namespace, total_url
+from database import db_call
 from phrases import PHRASES
 from pyscript import document, window
 from pyscript.ffi import create_proxy
-from timeutil import ago_text, iso_to_seconds
 
 list_el = document.getElementById("list")
 empty_el = document.getElementById("empty")
@@ -21,8 +19,12 @@ search_el = document.getElementById("search")
 btn_count = document.getElementById("sort-count")
 btn_number = document.getElementById("sort-number")
 
+NS = db_namespace(window.location.hostname)  # 'live' on the real site, 'dev' on your own computer
+REFRESH_MS = 30000
+NOT_AVAILABLE = "The stats are not available right now. Please try again later."
+
 counts = {}  # sentence number -> how many times it has landed
-state = {"sort": "count", "query": ""}
+state = {"sort": "count", "query": "", "loaded": False}
 
 
 def grouped(value):
@@ -33,20 +35,6 @@ def grouped(value):
         out = "," + digits[-3:] + out
         digits = digits[:-3]
     return digits + out
-
-
-def now_iso():
-    """The current time as text like '2026-11-06T11:40:12.345Z' (see timeutil.py for why text)."""
-    return str(window.Date.new().toISOString())
-
-
-def ago(iso):
-    """How long ago a snapshot was saved, in plain words."""
-    try:
-        gap = iso_to_seconds(now_iso()) - iso_to_seconds(iso)
-    except Exception:
-        return ""
-    return ago_text(max(0, gap))
 
 
 def short(text, limit=34):
@@ -139,68 +127,45 @@ def on_search(event):
 def load_stats(data):
     for key in data.get("counts", {}):
         counts[int(key)] = int(data["counts"][key])
-    when = data.get("updated")
-    if when:
-        updated_el.innerText = "Snapshot saved %s" % ago(when)
-        try:
-            updated_el.title = str(window.Date.new(when).toLocaleString())
-        except Exception:
-            pass
-    else:
-        updated_el.innerText = "No snapshot saved yet. The first one appears within about 10 minutes of the next spins."
+    state["loaded"] = True
+    updated_el.innerText = "Live numbers, updated at %s" % str(window.Date.new().toLocaleTimeString())
     show_summary(data)
     show_baseline_note(data)
     render()
 
 
-def fail(message):
-    updated_el.innerText = message
+def fetch_failed():
+    if state["loaded"]:
+        return  # keep showing the last numbers; the next refresh tries again
+    updated_el.innerText = NOT_AVAILABLE
     render()  # still show every sentence, with no counts
 
 
-NOT_AVAILABLE = "The stats are not available right now. Please try again later."
+def refresh():
+    """Read the counts, then the totals, and show them."""
+
+    def on_counts(rows):
+        by_number = {}
+        for row in rows:
+            by_number[str(row["number"])] = int(row["spins"])
+
+        def on_total(total_rows):
+            first = total_rows[0] if total_rows else {}
+            load_stats({"counts": by_number, "total": int(first.get("total", 0)),
+                        "baseline": int(first.get("baseline", 0)), "counted": sum(by_number.values())})
+
+        db_call(total_url(NS), "GET", None, on_total, fetch_failed)
+
+    db_call(counts_url(NS), "GET", None, on_counts, fetch_failed)
 
 
-def fetch_stats():
-    # On the real site, read the snapshot from the stats-data branch and fall back to the copy that ships
-    # with the page. On your own computer only the local copy is used, unless the address ends in
-    # ?statsfrom=live (a testing switch that works only away from the real site).
-    live = window.location.hostname == LIVE_HOST or "statsfrom=live" in str(window.location.search)
-    urls = stats_urls(live)
-    stamp = now_iso()[:16]  # changes every minute, so a fresh snapshot is picked up (text, not a number)
-
-    def try_url(i):
-        if i >= len(urls):
-            fail(NOT_AVAILABLE)
-            return
-
-        def on_response(resp):
-            if resp.ok:
-                return resp.text()
-            return None
-
-        def on_text(text):
-            data = None
-            if text:
-                try:
-                    data = json.loads(text)
-                except Exception:
-                    data = None
-            if data is None:
-                try_url(i + 1)  # missing or unreadable: try the next address
-            else:
-                load_stats(data)
-
-        try:
-            window.fetch("%s?t=%s" % (urls[i], stamp)).then(create_proxy(on_response)).then(create_proxy(on_text)).catch(
-                create_proxy(lambda e: try_url(i + 1)))
-        except Exception:
-            try_url(i + 1)
-
-    try_url(0)
+def refresh_if_visible():
+    if not document.hidden:
+        refresh()
 
 
 btn_count.addEventListener("click", create_proxy(lambda e: set_sort("count")))
 btn_number.addEventListener("click", create_proxy(lambda e: set_sort("number")))
 search_el.addEventListener("input", create_proxy(on_search))
-fetch_stats()
+refresh()
+window.setInterval(create_proxy(refresh_if_visible), REFRESH_MS)

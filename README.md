@@ -45,105 +45,47 @@ file in the [`sounds`](sounds) folder and add a line to [`sounds.json`](sounds.j
 `{"37": "apple-in-bowl.mp3"}`. A speaker button on the wheel lets people mute it. The
 folder's [README](sounds/README.md) has the details and tips. Sentences with no entry stay silent.
 
-## Global spin counter
+## Counters and stats (Supabase)
 
-The online version shows how many spins everyone has done in total ("🍪 1,234 spins worldwide").
-GitHub Pages cannot store data, so the total is kept on a free public counter service,
-[Abacus](https://jasoncameron.dev/abacus/). When a spin finishes, the page asks it to add 1 and
-shows the new total. Only the counter's name is sent, nothing about the player. If the service is
-unreachable, the game still works and the counter is simply hidden. Spins made on `localhost` use
-a separate "-dev" counter, so testing does not change the real number.
-
-Because it is a public counter, anyone who knows its address could push the number up. That is fine
-for a fun game, but do not treat the number as exact.
-
-## Stats page: how often each sentence lands
-
-The **📊 Stats** link next to the worldwide counter opens [`stats.html`](stats.html): all 106 sentences
-with how many times each has landed, most landed first, with a search box and a "By number" switch.
+Every number the game remembers lives in **one Supabase database**, the single source of truth: the
+worldwide spin total ("🍪 1,234 spins worldwide" under the wheel) and one count for each of the 106 sentences
+(the stats page). GitHub Pages cannot store anything itself, so it needs a small database next to it.
 
 How it works:
 
-1. When a sentence lands, the game adds 1 to that sentence's own counter on the same counter service
-   (names like `sentence-37`). Spins forced with the test shortcuts are not counted.
-2. A browser cannot write into this repository (that would need a secret password in the public code),
-   so a **scheduled GitHub Action** does it instead. About every 10 minutes (GitHub's scheduler is best-effort, so a run can start
-   a little late) it runs [`update_stats.py`](update_stats.py), which reads all the counters and saves them into
-   `stats.json`. It only saves when something changed.
-3. That file is saved on its **own branch, `stats-data`**, not on `main`. A save on `main` would make
-   GitHub rebuild the website each time (Pages only allows about 10 rebuilds an hour) and would bury your
-   real changes in "Update stats" commits. On its own branch it costs nothing, and the branch's history is
-   a neat record of how the numbers grew. You can browse it on GitHub with the branch menu.
-4. The stats page reads the file straight from that branch, so it opens instantly and is usually less than
-   about 15 minutes behind the live game (up to 10 minutes for the next save, plus GitHub's own 5 minute
-   cache).
-5. The spins from before the per-sentence counters existed were only counted as a total, so nobody knows which
-   sentences they landed on. See "Stand-in numbers for the earlier spins" below.
+1. When a spin finishes, the page calls one database function, `record_spin`, which adds 1 to the worldwide
+   total and 1 to the sentence that landed, in one step, and hands back the new total. Only the sentence
+   number is sent, nothing about the player. A spin that is left halfway (tab closed) is never counted.
+   Spins forced with the test shortcuts are not counted.
+2. The new total is what the page shows, and it is how the spin-1,000 message knows who made the 1,000th spin:
+   exactly one player gets that number back.
+3. The **📊 Stats** page (`stats.html`) reads the 106 counts straight from the database and refreshes itself
+   every 30 seconds while it is open. There is no saved copy, no schedule and no GitHub Action to keep running.
+4. If the database cannot be reached the game still works; the counter just stays hidden.
 
-The Action is [`.github/workflows/update-stats.yml`](.github/workflows/update-stats.yml) and the saving
-steps are in [`.github/scripts/save_stats.sh`](.github/scripts/save_stats.sh). To run it
-right now instead of waiting: on GitHub open the **Actions** tab, choose **Update stats**, then
-**Run workflow**. You can also run the same thing yourself on any computer:
+**Setting the database up** (already done for this project; this is for rebuilding it): create a free project at
+[supabase.com](https://supabase.com), open its **SQL Editor** and run [`supabase_setup.sql`](supabase_setup.sql). Then put
+the project address and the **publishable** key in [`counters.py`](counters.py).
 
-```bash
-python update_stats.py          # the real counters, rewrites stats.json in this folder
-python update_stats.py --dev    # the testing counters (what a local copy of the game counts into)
-```
+**Safety.** The publishable key is *meant* to be in public web pages. Row Level Security is on for both tables,
+so that key can only (a) read the counts and (b) call `record_spin`. It cannot edit, reset or delete a number.
+The `secret` / `service_role` keys must **never** go in this repository (a test fails if one ever does).
+Someone who knows the address could still call `record_spin` over and over, so treat the numbers as fun, not exact.
 
-It takes about a minute and a half because the counter service only allows 30 requests per 10 seconds.
-If you test the game on your own computer, its spins go to the separate "-dev" counters. Run
-`python update_stats.py --dev`, open `http://localhost:8765/stats.html`, and you will see your test spins.
-Do not commit that test version of `stats.json`: run `git checkout stats.json` to put the starting
-one back. (The copy of `stats.json` on `main` is only a starting snapshot for local testing and a fallback for
-the page until the first scheduled save exists; the real, current numbers live on the `stats-data` branch.) On a local copy you can also add `?statsfrom=live` to the
-stats page address to make it read the real snapshot from the branch, like the live site does.
+**Two sets of numbers.** Spins made anywhere except the real website (for example `localhost` while you are
+testing) are counted into separate `dev` rows, so testing never changes the real numbers. To start the `dev`
+numbers again, run `update public.spin_totals set total = 0 where namespace = 'dev'; update public.sentence_counts
+set spins = 0 where namespace = 'dev';` in the SQL Editor.
 
-### Keeping the stats fresh by itself: the outside timer
+**Free plan note.** Supabase's free plan pauses a project after about a week with no activity at all. Players
+spinning keep it awake. If it ever pauses, open the project in the dashboard and press **Restore**; nothing is
+lost. Under Settings, then API Keys, you can make a new publishable key if you ever want to change it.
 
-GitHub's own scheduler (the `schedule` entry in the workflow) turned out to be unreliable for this repository:
-in the first three hours it never started a single run, only the ones started by hand. So a free outside timer,
-[cron-job.org](https://cron-job.org), asks GitHub to start the **Update stats** workflow every 10 minutes. The
-`schedule` entry is left in place as a backup, and the workflow queues runs one at a time, so the two can never
-overlap. A run that finds nothing new saves nothing.
-
-What the timer sends (nothing secret is stored in this repository; the token lives only in cron-job.org):
-
-- Address: `https://api.github.com/repos/manuel-verduzco/mike-echo-lima/actions/workflows/update-stats.yml/dispatches`
-- Method: `POST`, body: `{"ref":"main"}`
-- Headers: `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
-  `X-GitHub-Api-Version: 2022-11-28`
-- GitHub answers `204` (no content) when it worked, and a new run with the event "workflow_dispatch" appears in
-  the Actions tab.
-
-The token is a GitHub **fine-grained personal access token** limited to this one repository with only the
-**Actions: Read and write** permission (nothing else, so it cannot change any code). It has an expiry date, at
-most one year. When it expires the timer starts failing: make a new token and paste it into the cron-job.org
-job. You can switch the timer off any time by pausing the job, or revoke the token in GitHub (Settings, Developer
-settings, Personal access tokens).
-
-### Stand-in numbers for the earlier spins
-
-So that the stats page adds up to the worldwide counter from day one, `make_baseline.py` makes up numbers
-for the spins made *before* the sentence counters existed. It shares them out across the sentences at random
-(every sentence is equally likely to land, so an even random spread looks like real data), except for any
-sentence you pin to a chosen number. It saves them in `stats_baseline.json`, and `update_stats.py` adds them on
-top of the real counters.
-
-**These numbers are made up.** The stats page no longer carries a note saying so (that was a choice made
-after launch), but the "Spins counted" card still reads "N of them estimated" while a baseline is in use, and this
-README and `stats_baseline.json` (its `note` field) record it. If the page's note is ever wanted again, it lives
-in `show_baseline_note` in [`stats.py`](stats.py).
-
-```bash
-python make_baseline.py --pin 1=12   # run ONCE, just before the stats go live (it reads the worldwide total right then)
-```
-
-`--pin 1=12` fixes sentence 1 at exactly 12 (you can pin several: `--pin 1=12 --pin 37=9`). With about 800 earlier
-spins that gives an average of about 7.5 per sentence, a range of roughly 2 to 15, and sentence 1 near the top
-ten, which is what real random spins would look like. The command prints how the spread looks so you can judge it.
-
-It refuses to overwrite an existing baseline, because changing it later would rewrite history. Delete
-`stats_baseline.json` (and the stand-ins disappear from the next snapshot) if you ever change your mind.
+**The first 1,002 spins.** The sentence counters were added after the game was already being played, so those
+earlier spins were only ever counted as a total. The database was loaded with made-up numbers for them, spread
+roughly evenly over the sentences (with sentence 1 set to 12), so that the stats add up to the worldwide
+total. They are recorded in [`stats_baseline.json`](stats_baseline.json), and the "Spins counted" card on the
+stats page says how many of its spins are estimated. Every spin after that is counted for real.
 
 ## Make it yours
 
@@ -266,13 +208,10 @@ Then open **http://localhost:8765/index.html**. Stop the server with `Ctrl+C` wh
 - `phrases.json` and `phrases.py`: the sentences, and the code that loads them and deals the wheel.
 - `pyscript.toml`: the list of Python and JSON files the browser has to download. If you ever add a new
   `.py` file that `web.py` imports, list it here too (a test reminds you if you forget).
-- `stats.html` and `stats.py`: the stats page, which loads `stats.json`.
-- `stats.json`: the saved snapshot of every sentence's counter. Rewritten by the Action, not by hand.
-- `make_baseline.py` and `stats_baseline.json`: the stand-in numbers for the earliest spins (see above).
-- `timeutil.py`: tiny date helpers (the browser's Python cannot hold JavaScript's millisecond clock).
-- `update_stats.py`, `.github/workflows/update-stats.yml` and `.github/scripts/save_stats.sh`: the script, the
-  schedule and the saving steps that refresh it.
-- `counters.py`: the counter names and addresses shared by the game, the stats page and the script.
+- `stats.html` and `stats.py`: the stats page, which reads the live counts from the database.
+- `counters.py` and `database.py`: where the database is and how the pages talk to it.
+- `supabase_setup.sql`: the tables and the one safe "add a spin" function, to run once in Supabase.
+- `stats_baseline.json`: the made-up starting numbers for the earliest spins (a record of what was loaded).
 - `sounds.json` and `sounds/`: the optional voice notes.
 - `favicon.*` and `apple-touch-icon.png`: the cookie icon.
 - `spin_wheel.py`: the desktop version (tkinter).
@@ -290,16 +229,12 @@ Then open **http://localhost:8765/index.html**. Stop the server with `Ctrl+C` wh
   deployment" run is stuck for several minutes, cancel it and choose **Re-run all jobs**.
 - **Starting from a brand new repository.** In the repository on GitHub, go to Settings, then Pages,
   choose **Deploy from a branch**, branch `main`, folder `/ (root)`, and save.
-- **The stats page is not updating.** The first save only happens after the first run of the Action. On GitHub open the **Actions** tab and look at the latest
-  **Update stats** run. A red cross means it failed (open it to read why), and you can press **Run
-  workflow** to try again. If nothing ever runs, check that Actions are switched on for the repository.
-- **Scheduled runs stop after a quiet spell.** GitHub switches off scheduled workflows in a public repository
-  that has seen no activity for 60 days. If the stats stop updating, open the **Actions** tab, choose **Update
-  stats** and press **Enable workflow**.
-- **GitHub refuses to let you push `.github/workflows/...`.** Pushing a workflow file needs the `workflow`
-  permission on your sign-in. Run `gh auth refresh -s workflow` (or sign in again and tick the workflow
-  permission), then push again.
-- **The spin counter shows nothing.** The free counter service may be down. The game works without it.
+- **The spin counter shows nothing, or the stats page says "not available".** The database may be paused (the free
+  plan pauses a project after about a week of no use) or unreachable. Open the project in the Supabase dashboard
+  and press **Restore** if it says paused. The game keeps working without the counter.
+- **Counts stopped after changing sentences.** The database has rows for sentences 1 to 106. If you add more
+  sentences, add rows for them too (raise the `106` in the "starting rows" part of `supabase_setup.sql` and run it
+  again); a test warns you.
 
 ---
 

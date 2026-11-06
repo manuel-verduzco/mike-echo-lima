@@ -1,35 +1,40 @@
-"""Names and addresses for the counters (shared by the game, the stats page and update_stats.py).
+"""Where the counters live: one Supabase database, the single source of truth for every number.
 
-All counts live on the free public counter service Abacus (https://jasoncameron.dev/abacus/):
-    - one counter for all spins worldwide:      key "spins"
-    - one counter per sentence:                 key "sentence-1" ... "sentence-106"
-Spins made anywhere except the real website (for example on your own computer while testing)
-use a separate "-dev" namespace, so they never change the real numbers.
+    spin_totals      the worldwide spin total (and how many of those spins are stand-ins)
+    sentence_counts  how many times each of the 106 sentences has landed
+
+The tables and the one safe "add a spin" function are created by supabase_setup.sql.
+
+The key below is Supabase's PUBLISHABLE key. It is meant to sit in public web pages. Row Level Security
+makes it able to do exactly two things: read the counts, and call record_spin(), which adds 1 to the
+total and 1 to one sentence. It cannot edit, reset or delete anything. NEVER put a Supabase "secret"
+key (it starts sb_secret_) or a "service_role" key anywhere in this repository; a test checks for that.
+
+Spins made anywhere except the real website (for example on your own computer while testing) count
+into a separate "dev" set of rows, so testing never changes the real numbers.
 """
 
-COUNTER_BASE = "https://abacus.jasoncameron.dev"
+DB_URL = "https://nrkmcigbxryjfukuberx.supabase.co"
+DB_KEY = "sb_publishable_8bOCxhbcu-fimksoK2cKvA_DTJu_vih"
 LIVE_HOST = "manuel-verduzco.github.io"  # the address of the real website
-LIVE_NAMESPACE = "manuel-verduzco-mike-echo-lima"
-TOTAL_KEY = "spins"
 
 
-def namespace_for(hostname):
-    """The counter namespace to use when the page is served from `hostname`."""
-    return LIVE_NAMESPACE if hostname == LIVE_HOST else LIVE_NAMESPACE + "-dev"
+def db_namespace(hostname):
+    """Which set of rows to use: 'live' on the real site, 'dev' everywhere else."""
+    return "live" if hostname == LIVE_HOST else "dev"
 
 
-def sentence_key(number):
-    """Counter name for one sentence (the service needs names of 3+ characters)."""
-    return "sentence-%d" % number
+def db_headers():
+    return {"apikey": DB_KEY, "Content-Type": "application/json"}
 
 
-# The stats snapshot (see update_stats.py). The scheduled Action saves it on its own branch, "stats-data",
-# and the stats page reads it from there (GitHub's raw file address allows web pages to read it).
-# The copy of stats.json on the main branch is only a starting point for local testing and a fallback.
-LIVE_STATS_URL = "https://raw.githubusercontent.com/manuel-verduzco/mike-echo-lima/stats-data/stats.json"
-LOCAL_STATS_URL = "stats.json"
+def record_spin_url():
+    return DB_URL + "/rest/v1/rpc/record_spin"
 
 
-def stats_urls(is_live):
-    """Addresses to try, in order, for the stats snapshot."""
-    return [LIVE_STATS_URL, LOCAL_STATS_URL] if is_live else [LOCAL_STATS_URL]
+def total_url(namespace):
+    return "%s/rest/v1/spin_totals?select=total,baseline&namespace=eq.%s" % (DB_URL, namespace)
+
+
+def counts_url(namespace):
+    return "%s/rest/v1/sentence_counts?select=number,spins&namespace=eq.%s" % (DB_URL, namespace)
