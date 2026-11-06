@@ -98,6 +98,29 @@ one back. (The copy of `stats.json` on `main` is only a starting snapshot for lo
 the page until the first scheduled save exists; the real, current numbers live on the `stats-data` branch.) On a local copy you can also add `?statsfrom=live` to the
 stats page address to make it read the real snapshot from the branch, like the live site does.
 
+### Keeping the stats fresh by itself: the outside timer
+
+GitHub's own scheduler (the `schedule` entry in the workflow) turned out to be unreliable for this repository:
+in the first three hours it never started a single run, only the ones started by hand. So a free outside timer,
+[cron-job.org](https://cron-job.org), asks GitHub to start the **Update stats** workflow every 10 minutes. The
+`schedule` entry is left in place as a backup, and the workflow queues runs one at a time, so the two can never
+overlap. A run that finds nothing new saves nothing.
+
+What the timer sends (nothing secret is stored in this repository; the token lives only in cron-job.org):
+
+- Address: `https://api.github.com/repos/manuel-verduzco/mike-echo-lima/actions/workflows/update-stats.yml/dispatches`
+- Method: `POST`, body: `{"ref":"main"}`
+- Headers: `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+  `X-GitHub-Api-Version: 2022-11-28`
+- GitHub answers `204` (no content) when it worked, and a new run with the event "workflow_dispatch" appears in
+  the Actions tab.
+
+The token is a GitHub **fine-grained personal access token** limited to this one repository with only the
+**Actions: Read and write** permission (nothing else, so it cannot change any code). It has an expiry date, at
+most one year. When it expires the timer starts failing: make a new token and paste it into the cron-job.org
+job. You can switch the timer off any time by pausing the job, or revoke the token in GitHub (Settings, Developer
+settings, Personal access tokens).
+
 ### Stand-in numbers for the earlier spins
 
 So that the stats page adds up to the worldwide counter from day one, `make_baseline.py` makes up numbers
