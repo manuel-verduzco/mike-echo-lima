@@ -94,8 +94,8 @@ It takes about a minute and a half because the counter service only allows 30 re
 If you test the game on your own computer, its spins go to the separate "-dev" counters. Run
 `python update_stats.py --dev`, open `http://localhost:8765/stats.html`, and you will see your test spins.
 Do not commit that test version of `stats.json`: run `git checkout stats.json` to put the starting
-one back. (The copy of `stats.json` on `main` is only a starting point for local testing and a fallback; the
-real numbers live on the `stats-data` branch.) On a local copy you can also add `?statsfrom=live` to the
+one back. (The copy of `stats.json` on `main` is only a starting snapshot for local testing and a fallback for
+the page until the first scheduled save exists; the real, current numbers live on the `stats-data` branch.) On a local copy you can also add `?statsfrom=live` to the
 stats page address to make it read the real snapshot from the branch, like the live site does.
 
 ### Stand-in numbers for the earlier spins
