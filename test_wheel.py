@@ -4,7 +4,8 @@ import random
 import re
 import unittest
 
-from effects import EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, SECRET_GAP_MS, SECRET_TAPS, choose_effects, register_tap
+from effects import (EFFECT_CHANCE, EFFECTS, JACKPOT_NUMBER, MILESTONE_MESSAGE, MILESTONE_SPIN, MILESTONE_TITLE,
+                     SECRET_GAP_MS, SECRET_TAPS, choose_effects, is_milestone, register_tap)
 from phrases import GROUPS, PHRASES, deal, group_index, label, random_number
 from spin_wheel import number_at_pointer, pick_number, target_angle
 
@@ -69,6 +70,20 @@ class EffectTests(unittest.TestCase):
 
     def test_the_jackpot_number_has_a_sentence_to_show(self):
         self.assertIn(JACKPOT_NUMBER, PHRASES)  # the banner shows this sentence
+
+
+class MilestoneTests(unittest.TestCase):
+    def test_only_the_exact_milestone_spin_wins(self):
+        self.assertTrue(is_milestone(MILESTONE_SPIN))
+        for total in (0, 1, 999, 1001, 2000):
+            self.assertFalse(is_milestone(total))
+
+    def test_the_milestone_is_spin_number_1000(self):
+        self.assertEqual(MILESTONE_SPIN, 1000)
+
+    def test_there_is_a_message_to_show(self):
+        self.assertTrue(MILESTONE_TITLE.strip())
+        self.assertTrue(MILESTONE_MESSAGE.strip())
 
 
 class SecretTapTests(unittest.TestCase):

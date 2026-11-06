@@ -28,9 +28,14 @@ Choc Chip Cookie); your choice is remembered.
   cookies.
 - **Random surprises.** About 1 spin in 4 gets one random effect: a burst of crumbs and chocolate
   chips from the pointer, or a shower of cookies.
+- **Spin number 1,000.** The worldwide counter tells each player the new total as their spin is
+  counted, so exactly one person's spin comes back as 1,000. Only they see a gold full-screen
+  message (with the time, so a screenshot works as proof) and a downpour of cookies. If that
+  person's connection drops at that exact moment, nobody sees it, and someone could skip past 1,000
+  by calling the public counter directly, so treat it as a bit of fun.
 
-Which number is special, how often surprises happen and which effects exist are set at the top
-of [`effects.py`](effects.py). People who ask their device for reduced motion get the banner but
+Which number is special, how often surprises happen, which effects exist and the words of the
+spin-1,000 message are set in [`effects.py`](effects.py). People who ask their device for reduced motion get the banner but
 no flying particles.
 
 ## Sounds for sentences
@@ -121,7 +126,8 @@ Then open **http://localhost:8765/index.html**. Stop the server with `Ctrl+C` wh
   (find the address with `ipconfig` on Windows or `ifconfig` / `ip a` on Mac and Linux). Some work or
   guest networks block this. If so, test on the live site after publishing instead.
 - **Test shortcuts (local only, switched off on the live site):** add `?force=37` to the address
-  and the wheel always lands on sentence 37. Add `&fx=crumbs` or `&fx=rain` to force a special effect.
+  and the wheel always lands on sentence 37. Add `&fx=crumbs` or `&fx=rain` to force a special effect, or `&milestone=1` to see the
+  spin-1,000 message after your next spin.
 - Spins made on your own computer are added to a separate "-dev" counter, so they never change the real number.
 - The desktop version needs no server: `python spin_wheel.py`.
 
@@ -155,7 +161,7 @@ Then open **http://localhost:8765/index.html**. Stop the server with `Ctrl+C` wh
 |---|---|---|
 | The sentences (add, edit, remove) | [`phrases.json`](phrases.json) | yes |
 | Add a voice note to a sentence | put the file in [`sounds/`](sounds), add a line to [`sounds.json`](sounds.json) | no |
-| The special number, how often surprises happen | top of [`effects.py`](effects.py) | yes |
+| The special number, how often surprises happen, the spin-1,000 message | [`effects.py`](effects.py) | yes |
 | How many slices the wheel has | `GROUPS` in [`phrases.py`](phrases.py) | yes |
 | Biscuit looks, wheel drawing, spin behaviour, effects, sounds | [`web.py`](web.py) | yes |
 | Page layout, colours, text, phone layout | [`index.html`](index.html) | no |

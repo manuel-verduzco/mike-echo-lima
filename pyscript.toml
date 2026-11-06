@@ -2,6 +2,6 @@
 # after each update - bump it whenever phrases.py or phrases.json change).
 # Right side = where the file lands inside the browser's Python.
 [files]
-"./phrases.py?v=35" = "./phrases.py"
-"./phrases.json?v=35" = "./phrases.json"
-"./effects.py?v=35" = "./effects.py"
+"./phrases.py?v=37" = "./phrases.py"
+"./phrases.json?v=37" = "./phrases.json"
+"./effects.py?v=37" = "./effects.py"

@@ -29,6 +29,19 @@
     #result.jackpot #num { background: #3a2300; color: #ffd45a; }
     @keyframes jackpot-shine { to { background-position: -220% 0; } }
     @media (prefers-reduced-motion: reduce) { #result.jackpot { animation: none; } }
+    /* The "spin number 1,000" message. Sits under the cookie rain (#fx) so cookies fall over it. */
+    #milestone { position: fixed; inset: 0; z-index: 18; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(8, 8, 14, .82); }
+    #milestone[hidden] { display: none; }
+    .ms-card { box-sizing: border-box; width: 100%; max-width: 440px; max-height: 100%; overflow: auto; text-align: center; padding: 22px 20px 20px; border-radius: 20px; background: linear-gradient(160deg, #2a2230, #17141f 60%); border: 2px solid #ffd45a; box-shadow: 0 0 0 4px rgba(255, 212, 90, .18), 0 0 60px rgba(255, 190, 40, .45); animation: ms-pop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+    .ms-crown { font-size: 3rem; line-height: 1; animation: ms-bob 1.8s ease-in-out infinite; }
+    .ms-num { margin: 4px 0 2px; font-size: clamp(3rem, 16vw, 4.6rem); font-weight: 900; line-height: 1.05; background: linear-gradient(180deg, #fff3b0, #ffc93c 55%, #e08a00); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 1.5px #6b3d00; filter: drop-shadow(0 4px 14px rgba(255, 190, 40, .6)); }
+    .ms-card h2 { margin: 0 0 10px; font-size: clamp(1.25rem, 6vw, 1.6rem); color: #fff; }
+    .ms-card p { margin: 0 0 10px; line-height: 1.45; color: #e6e0f0; }
+    #ms-stamp { font-size: .8rem; color: #9a9ab0; min-height: 1.2em; }
+    #ms-close { margin-top: 6px; background: linear-gradient(180deg, #ffd45a, #f0a500); color: #3a2300; }
+    @keyframes ms-pop { 0% { opacity: 0; transform: scale(.6) rotate(-4deg); } 100% { opacity: 1; transform: none; } }
+    @keyframes ms-bob { 50% { transform: translateY(-6px) rotate(6deg); } }
+    @media (prefers-reduced-motion: reduce) { .ms-card, .ms-crown { animation: none; } }
     #counter { visibility: hidden; margin-top: 14px; min-height: 1.3em; font-size: .85rem; color: #9a9ab0; }
     small { font-size: .75rem; color: #6a6a7e; }
     small a { color: #8b95ad; }
@@ -104,8 +117,18 @@
     <a href="https://pyscript.net">PyScript</a>.
     <a href="https://github.com/manuel-verduzco/mike-echo-lima">Source on GitHub</a></small></p>
   <audio id="player" preload="none"></audio>
+  <div id="milestone" role="dialog" aria-modal="true" aria-labelledby="ms-title" hidden>
+    <div class="ms-card">
+      <div class="ms-crown" aria-hidden="true">👑</div>
+      <div class="ms-num" id="ms-num"></div>
+      <h2 id="ms-title"></h2>
+      <p id="ms-msg"></p>
+      <p id="ms-stamp"></p>
+      <button id="ms-close">Keep spinning 🍪</button>
+    </div>
+  </div>
   <canvas id="fx" aria-hidden="true"></canvas>
   <div id="banner" aria-hidden="true"></div>
-  <script type="mpy" src="./web.py?v=35" config="./pyscript.toml?v=35"></script>
+  <script type="mpy" src="./web.py?v=37" config="./pyscript.toml?v=37"></script>
 </body>
 </html>

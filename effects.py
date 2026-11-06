@@ -37,3 +37,20 @@ def register_tap(taps, now_ms):
     if len(taps) >= SECRET_TAPS:
         return [], True
     return taps, False
+
+
+# The milestone: the person whose spin brings the worldwide counter to exactly
+# MILESTONE_SPIN gets a special message. Change the number or the words to suit.
+MILESTONE_SPIN = 1000
+MILESTONE_NUMBER_TEXT = "#1,000"
+MILESTONE_TITLE = "You are spin number 1,000!"
+MILESTONE_MESSAGE = (
+    "Out of everyone who has ever spun the Bic Bic, you are the 1,000th. "
+    "That makes you officially a Bic Bic legend. "
+    "Take a screenshot as proof, because there is only one of you!"
+)
+
+
+def is_milestone(total):
+    """True when the worldwide counter has just reached the milestone."""
+    return total == MILESTONE_SPIN

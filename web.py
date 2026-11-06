@@ -7,7 +7,8 @@ import json
 import math
 import random
 
-from effects import JACKPOT_NUMBER, choose_effects, register_tap
+from effects import (JACKPOT_NUMBER, MILESTONE_MESSAGE, MILESTONE_NUMBER_TEXT, MILESTONE_TITLE,
+                     choose_effects, is_milestone, register_tap)
 from phrases import PHRASES, deal, group_index, label, random_number
 from pyscript import document, window
 from pyscript.ffi import create_proxy
@@ -32,9 +33,11 @@ counter_el = document.getElementById("counter")
 
 IS_LIVE = window.location.hostname == "manuel-verduzco.github.io"
 # For testing only, and ignored on the live site: add ?force=1 to the address to make the
-# wheel land on that number, and/or &fx=crumbs (or rain) to force an effect.
+# wheel land on that number, and/or &fx=crumbs (or rain) to force an effect, and/or
+# &milestone=1 to see the "spin number 1,000" message after the next spin.
 FORCE_NUMBER = None
 FORCE_FX = None
+FORCE_MILESTONE = False
 if not IS_LIVE:
     for part in window.location.search.replace("?", "").split("&"):
         pair = part.split("=")
@@ -42,6 +45,8 @@ if not IS_LIVE:
             FORCE_NUMBER = int(pair[1])
         if len(pair) == 2 and pair[0] == "fx":
             FORCE_FX = pair[1]
+        if len(pair) == 2 and pair[0] == "milestone" and pair[1] == "1":
+            FORCE_MILESTONE = True
 
 # ---- Global spin counter -------------------------------------------------------
 # GitHub Pages cannot store anything, so the total lives on a free public counter
@@ -81,6 +86,8 @@ def counter_request(action, retry=True):
     def on_data(data):
         if data:
             show_count(data.value)
+            if action == "hit" and is_milestone(int(data.value)):
+                celebrate_milestone()  # this very spin made the counter reach the milestone
         elif action == "get" and status[0] == 404:
             show_count(0)  # nobody has spun yet, so the counter does not exist yet
         elif retry:
@@ -697,6 +704,56 @@ def release(event):
     spin(force)
 
 
+# ---- The milestone message -----------------------------------------------------
+# The free counter tells each player the new total as their spin is counted, so exactly one
+# person's spin comes back as the milestone number (1,000) and only they see this message.
+# (If that person's connection drops at that exact moment, nobody sees it.)
+ms_box = document.getElementById("milestone")
+ms_open = False
+
+
+def close_milestone(event=None):
+    global ms_open
+    ms_open = False
+    ms_box.hidden = True
+
+
+def show_milestone():
+    global ms_open
+    if ms_open:
+        return
+    ms_open = True
+    document.getElementById("ms-num").innerText = MILESTONE_NUMBER_TEXT
+    document.getElementById("ms-title").innerText = MILESTONE_TITLE
+    document.getElementById("ms-msg").innerText = MILESTONE_MESSAGE
+    try:
+        document.getElementById("ms-stamp").innerText = window.Date.new().toLocaleString()  # proof of when
+    except Exception:
+        document.getElementById("ms-stamp").innerText = ""
+    ms_box.hidden = False
+    document.getElementById("ms-close").focus()
+    if not reduced_motion():
+        fx_size()
+        fx_rain(120)  # a proper downpour
+        x, y = pointer_pos()
+        fx_crumbs(x, y)
+        fx_start()
+        try:
+            window.navigator.vibrate([120, 60, 120, 60, 360])
+        except Exception:
+            pass
+
+
+def celebrate_milestone():
+    # wait a moment so the player sees where their own spin landed first
+    window.setTimeout(create_proxy(show_milestone), 1300)
+
+
+def on_key(event):
+    if ms_open and event.key == "Escape":
+        close_milestone()
+
+
 # ---- Secret shortcut: tap the title 5 times and the next spin lands on #1 -------------
 # Handy for showing the #1 special (and its sound) on a phone, where the test options in
 # the web address are switched off on the live site. A spin forced this way is not added to
@@ -763,6 +820,8 @@ def spin(force):
         say(PHRASES[number], number)
         if not secret:
             counter_request("hit")  # count this finished spin (forced ones do not count)
+        if FORCE_MILESTONE:
+            celebrate_milestone()  # testing only, never on the live site
         play_sound(number)  # its own voice note / sound, if you added one
         fire_effects(effects, number)
         button.disabled = False
@@ -795,6 +854,9 @@ window.addEventListener("pointercancel", create_proxy(release))
 button.addEventListener("click", create_proxy(lambda e: spin(0.5) if e.detail == 0 else None))
 document.getElementById("swap").addEventListener("click", create_proxy(next_theme))
 document.querySelector("h1").addEventListener("click", create_proxy(title_tap))
+document.getElementById("ms-close").addEventListener("click", create_proxy(close_milestone))
+ms_box.addEventListener("click", create_proxy(lambda e: close_milestone() if e.target.id == "milestone" else None))
+window.addEventListener("keydown", create_proxy(on_key))
 mute_btn.addEventListener("click", create_proxy(toggle_mute))
 saved = None
 try:
